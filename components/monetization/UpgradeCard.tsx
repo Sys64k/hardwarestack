@@ -4,18 +4,13 @@ import { ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { calculateBottleneck } from "@/lib/bottleneck";
 import { AFFILIATE_REL, buildAmazonSearchUrl, buildGoogleShoppingUrl } from "@/lib/shopping-links";
-import type {
-  BottleneckComponent,
-  CpuOption,
-  GpuOption,
-  RamOption,
-  Resolution,
-} from "@/types/hardware";
+import { describePlan, planUpgrade, upgradeHeadline } from "@/lib/upgrade";
+import type { UpgradeTarget } from "@/lib/upgrade";
+import type { CpuOption, GpuOption, RamOption, Resolution } from "@/types/hardware";
 
 interface UpgradeCardProps {
-  bottleneckComponent: Exclude<BottleneckComponent, "Balanced">;
+  bottleneckComponent: UpgradeTarget;
   cpu: CpuOption;
   gpu: GpuOption;
   ram?: RamOption;
@@ -25,141 +20,50 @@ interface UpgradeCardProps {
   resolution: Resolution;
 }
 
-// Find the cheapest upgrade that actually eliminates the bottleneck when
-// paired with the current (non-bottleneck) components.
-function findMinimalUpgrade(
-  bottleneckComponent: Exclude<BottleneckComponent, "Balanced">,
-  cpu: CpuOption,
-  gpu: GpuOption,
-  ram: RamOption | undefined,
-  cpus: CpuOption[],
-  gpus: GpuOption[],
-  rams: RamOption[],
-  resolution: Resolution
-): CpuOption | GpuOption | RamOption | null {
-  if (bottleneckComponent === "GPU") {
-    const current = gpu.rasterScore ?? 0;
-    const candidates = gpus
-      .filter((g) => g.id !== gpu.id && (g.rasterScore ?? 0) > current)
-      .sort((a, b) => (a.rasterScore ?? 0) - (b.rasterScore ?? 0));
-    for (const candidate of candidates) {
-      if (calculateBottleneck(cpu, candidate, resolution, ram).bottleneckComponent !== "GPU") {
-        return candidate;
-      }
-    }
-    // At high resolutions no GPU may fully resolve the bottleneck — suggest the strongest available.
-    return candidates[candidates.length - 1] ?? null;
-  }
-
-  if (bottleneckComponent === "CPU") {
-    const TIER_RANK: Record<string, number> = { ENTRY: 0, MID: 1, HIGH: 2, ULTRA: 3, ENTHUSIAST: 4 };
-    const currentTier = TIER_RANK[cpu.tier] ?? 0;
-    const currentSingle = cpu.singleCoreScore ?? 0;
-    const candidates = cpus
-      .filter(
-        (c) =>
-          c.id !== cpu.id &&
-          c.vendor === cpu.vendor &&
-          ((TIER_RANK[c.tier] ?? 0) > currentTier ||
-            ((TIER_RANK[c.tier] ?? 0) === currentTier && (c.singleCoreScore ?? 0) > currentSingle))
-      )
-      .sort((a, b) => {
-        const td = (TIER_RANK[a.tier] ?? 0) - (TIER_RANK[b.tier] ?? 0);
-        return td !== 0 ? td : (a.singleCoreScore ?? 0) - (b.singleCoreScore ?? 0);
-      });
-    for (const candidate of candidates) {
-      if (calculateBottleneck(candidate, gpu, resolution, ram).bottleneckComponent !== "CPU") {
-        return candidate;
-      }
-    }
-    return candidates[candidates.length - 1] ?? null;
-  }
-
-  if (bottleneckComponent === "RAM" && ram) {
-    const currentBw = ram.speedMhz * ram.channels;
-    const candidates = rams
-      .filter((r) => r.id !== ram.id && r.speedMhz * r.channels > currentBw)
-      .sort((a, b) => a.speedMhz * a.channels - b.speedMhz * b.channels);
-    for (const candidate of candidates) {
-      if (calculateBottleneck(cpu, gpu, resolution, candidate).bottleneckComponent !== "RAM") {
-        return candidate;
-      }
-    }
-    return candidates[candidates.length - 1] ?? null;
-  }
-
-  return null;
-}
-
-function gpuDescription(resolution: Resolution): string {
-  if (resolution === "4K") {
-    return "4K is extremely GPU-demanding. No single upgrade may fully close the gap — this is the strongest option in our database.";
-  }
-  return "Your graphics card can't keep up at this resolution. A GPU upgrade will directly improve frame rates.";
-}
-
-export function UpgradeCard({
-  bottleneckComponent,
-  cpu,
-  gpu,
-  ram,
-  cpus,
-  gpus,
-  rams,
-  resolution,
-}: UpgradeCardProps) {
-  const upgrade = findMinimalUpgrade(
-    bottleneckComponent,
-    cpu,
-    gpu,
-    ram,
-    cpus,
-    gpus,
-    rams,
-    resolution
+function ShopButton({ modelName }: { modelName: string }) {
+  const amazonUrl = buildAmazonSearchUrl(modelName);
+  return (
+    <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+      <a
+        href={amazonUrl ?? buildGoogleShoppingUrl(modelName)}
+        target="_blank"
+        rel={amazonUrl ? AFFILIATE_REL : "noopener noreferrer"}
+        className={cn(buttonVariants({ variant: "default", size: "sm" }), "no-underline bg-slate-900 hover:bg-slate-700")}
+      >
+        {amazonUrl ? "Check price on Amazon" : "Google Shopping"}
+        <ExternalLink className="ml-1.5 h-3 w-3" />
+      </a>
+      {amazonUrl && <p className="text-[10px] uppercase tracking-wide text-slate-400">Affiliate Partner</p>}
+    </div>
   );
+}
 
-  if (!upgrade) return null;
-
-  const amazonUrl = buildAmazonSearchUrl(upgrade.modelName);
+export function UpgradeCard({ bottleneckComponent, cpu, gpu, ram, cpus, gpus, rams, resolution }: UpgradeCardProps) {
+  const plan = planUpgrade({ target: bottleneckComponent, cpu, gpu, ram, cpus, gpus, rams, resolution });
+  if (!plan) return null;
 
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-800">
-          Upgrade Recommendation
-        </CardTitle>
-        <p className="text-xs text-slate-500">
-          {bottleneckComponent === "GPU"
-            ? gpuDescription(resolution)
-            : bottleneckComponent === "CPU"
-              ? "Your processor is the limiting factor. A faster CPU will unlock your GPU's full potential."
-              : "Slow or single-channel RAM is starving your CPU. Upgrading to faster dual-channel memory can deliver measurable FPS gains."}
-        </p>
+        <CardTitle className="text-sm font-semibold text-slate-800">Upgrade Recommendation</CardTitle>
+        <p className="text-xs text-slate-500">{upgradeHeadline(plan, resolution)}</p>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-md border border-slate-100 bg-slate-50 p-3">
-          <p className="flex-1 text-sm font-medium text-slate-800 min-w-0 truncate">
-            {upgrade.modelName}
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
-            <a
-              href={amazonUrl ?? buildGoogleShoppingUrl(upgrade.modelName)}
-              target="_blank"
-              rel={amazonUrl ? AFFILIATE_REL : "noopener noreferrer"}
-              className={cn(
-                buttonVariants({ variant: "default", size: "sm" }),
-                "no-underline bg-slate-900 hover:bg-slate-700"
+      <CardContent className="pt-0 flex flex-col gap-2">
+        {describePlan(plan, cpu, ram).map((s) => (
+          <div
+            key={s.modelName}
+            className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-md border border-slate-100 bg-slate-50 p-3"
+          >
+            <div className="flex-1 min-w-0">
+              {s.label && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{s.label}</p>
               )}
-            >
-              {amazonUrl ? "Check price on Amazon" : "Google Shopping"}
-              <ExternalLink className="ml-1.5 h-3 w-3" />
-            </a>
+              <p className="text-sm font-medium text-slate-800 truncate">{s.modelName}</p>
+              {s.note && <p className="text-xs text-slate-500">{s.note}</p>}
+            </div>
+            <ShopButton modelName={s.modelName} />
           </div>
-        </div>
-        {amazonUrl && (
-          <p className="mt-2 text-[10px] uppercase tracking-wide text-slate-400">Affiliate Partner</p>
-        )}
+        ))}
       </CardContent>
     </Card>
   );

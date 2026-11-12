@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RESOLUTIONS, calculateBottleneck } from "@/lib/bottleneck";
 import { pairHref } from "@/lib/pair-pages";
+import { SOCKET_LABELS, SOCKET_ORDER, isRamCompatible, ramTypesForSocket } from "@/lib/platform";
 import type {
   CpuOption,
   GpuOption,
   RamOption,
-  RamTypeValue,
   Resolution,
 } from "@/types/hardware";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,24 +39,6 @@ const TIER_LABELS: Record<string, string> = {
   HIGH: "High-End",
   ULTRA: "Ultra",
   ENTHUSIAST: "Enthusiast",
-};
-
-const SOCKET_ORDER = ["AM4", "AM5", "LGA1200", "LGA1700", "LGA1851"] as const;
-const SOCKET_LABELS: Record<string, string> = {
-  AM4:    "AMD AM4 (Ryzen 5000 & older)",
-  AM5:    "AMD AM5 (Ryzen 7000/9000)",
-  LGA1200: "Intel LGA1200 (10th/11th Gen)",
-  LGA1700: "Intel LGA1700 (12th–14th Gen)",
-  LGA1851: "Intel LGA1851 (Core Ultra 200)",
-};
-
-// Which RAM types are valid for each socket.
-const SOCKET_RAM_COMPAT: Record<string, RamTypeValue[]> = {
-  AM4:    ["DDR4"],
-  AM5:    ["DDR5"],
-  LGA1200: ["DDR4"],
-  LGA1700: ["DDR4", "DDR5"],
-  LGA1851: ["DDR5"],
 };
 
 function groupByTier<T extends { tier: string }>(
@@ -139,20 +121,13 @@ export function BottleneckCalculator({
   const selectedGpu = gpus.find((g) => g.id === selectedGpuId);
   const selectedRam = rams.find((r) => r.id === selectedRamId);
 
-  const compatibleRamTypes: RamTypeValue[] | null = selectedCpu?.socket
-    ? (SOCKET_RAM_COMPAT[selectedCpu.socket] ?? null)
-    : null;
-  const compatibleRams = compatibleRamTypes
-    ? rams.filter((r) => compatibleRamTypes.includes(r.type))
-    : rams;
+  const compatibleRamTypes = ramTypesForSocket(selectedCpu?.socket ?? null);
+  const compatibleRams = rams.filter((r) => isRamCompatible(selectedCpu?.socket ?? null, r.type));
 
   function handleCpuChange(v: string) {
     setSelectedCpuId(v);
     const newCpu = cpus.find((c) => c.id === v);
-    if (newCpu?.socket && selectedRam) {
-      const compat = SOCKET_RAM_COMPAT[newCpu.socket] ?? [];
-      if (!compat.includes(selectedRam.type)) setSelectedRamId("");
-    }
+    if (newCpu && selectedRam && !isRamCompatible(newCpu.socket, selectedRam.type)) setSelectedRamId("");
   }
 
   const result =

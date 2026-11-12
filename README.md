@@ -1,6 +1,6 @@
 # HardwareStack
 
-PC hardware bottleneck calculator with upgrade recommendations. Select your CPU, GPU, and RAM to see which component is holding back your system at 1080p, 1440p, or 4K — and get a direct upgrade suggestion with links to Google Shopping and PCPartPicker.
+PC hardware bottleneck calculator with upgrade recommendations. Select your CPU, GPU, and RAM to see which component is holding back your system at 1080p, 1440p, or 4K — and get socket-aware upgrade suggestions: a drop-in that fits your current motherboard first, and a platform upgrade (naming the new motherboard socket and RAM type it needs) only when no drop-in removes the bottleneck. RAM suggestions only include kits your CPU's socket takes. Links go to Amazon (affiliate) or, with no affiliate tag set, Google Shopping. The logic lives in `lib/upgrade.ts` and `lib/platform.ts`.
 
 Live at **[hardwarestack.dev](https://hardwarestack.dev)**
 
