@@ -6,6 +6,7 @@ import { ShopLink } from "@/components/monetization/ShopLink";
 import { AgenticScore } from "@/components/local-ai/AgenticCodingTest";
 import {
   AGENTIC_TEST_CAVEAT,
+  AGENTIC_TEST_CPU_NOTE,
   AGENTIC_TEST_GPU,
   AGENTIC_TEST_LEVELS,
   AGENTIC_TEST_RESULTS,
@@ -121,8 +122,7 @@ export default async function CodingAgentsPage() {
         </div>
         <p className="px-4 py-2.5 border-t border-slate-100 text-[11px] text-slate-400">
           Memory and VRAM are this site&apos;s estimates at {CONTEXT_LABEL} context, the context the test started with.
-          They weren&apos;t measured in the test. A model that doesn&apos;t fit can still run with part of it in system
-          RAM, which makes it slower, not worse.
+          They weren&apos;t measured in the test. {AGENTIC_TEST_CPU_NOTE}
         </p>
       </div>
 

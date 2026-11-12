@@ -19,7 +19,6 @@ function result(overrides: Partial<AgenticTestResult>): AgenticTestResult {
     anchor: "x-1b",
     levelsPassed: 2,
     levelsPassedTestsFirst: null,
-    ranPartlyOnCpu: false,
     calculatorSlug: null,
     ...overrides,
   };

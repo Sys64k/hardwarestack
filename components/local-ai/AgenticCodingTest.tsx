@@ -13,20 +13,17 @@ import {
 import { CODING_AGENTS_PATH } from "@/lib/coding-agents";
 import type { AgenticTestResult } from "@/types/local-ai";
 
-// Score linked to the model's section of the results page, plus the CPU-spill note.
+// Score linked to the model's section of the results page.
 export function AgenticScore({ result }: { result: AgenticTestResult }) {
   return (
-    <>
-      <a
-        href={agenticTestResultUrl(result)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900"
-      >
-        {formatAgenticTestScore(result)} <ExternalLink className="h-3 w-3 text-slate-400" />
-      </a>
-      {result.ranPartlyOnCpu && <p className="text-[11px] text-slate-400">{AGENTIC_TEST_CPU_NOTE}</p>}
-    </>
+    <a
+      href={agenticTestResultUrl(result)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900"
+    >
+      {formatAgenticTestScore(result)} <ExternalLink className="h-3 w-3 text-slate-400" />
+    </a>
   );
 }
 
@@ -72,7 +69,7 @@ export function AgenticCodingTest() {
       </div>
 
       <p className="mt-3 text-xs text-slate-400 max-w-2xl">
-        Running partly on the CPU makes a model slower, not worse.{" "}
+        {AGENTIC_TEST_CPU_NOTE}{" "}
         <a href={AGENTIC_TEST_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-600">
           Full results and method
         </a>
