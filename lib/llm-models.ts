@@ -153,6 +153,34 @@ export const LLM_MODELS: LlmModel[] = [
     releaseDate: "2025-04",
     hfRepo: "Qwen/Qwen3-235B-A22B",
   },
+  {
+    slug: "qwen3-coder-30b-a3b",
+    name: "Qwen3-Coder 30B-A3B",
+    family: "Qwen",
+    paramsB: 30.53,
+    activeParamsB: 3.3,
+    kvBytesPerToken: 98_304, // 48 × 4 × 128
+    slidingWindowKv: null,
+    maxContextTokens: 262_144,
+    quants: GGUF_QUANTS,
+    license: "Apache 2.0",
+    releaseDate: "2025-07",
+    hfRepo: "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+  },
+  {
+    slug: "qwen2-5-coder-14b",
+    name: "Qwen2.5-Coder 14B",
+    family: "Qwen",
+    paramsB: 14.77,
+    activeParamsB: null,
+    kvBytesPerToken: 196_608, // 48 × 8 × 128
+    slidingWindowKv: null,
+    maxContextTokens: 32_768,
+    quants: GGUF_QUANTS,
+    license: "Apache 2.0",
+    releaseDate: "2024-11",
+    hfRepo: "Qwen/Qwen2.5-Coder-14B-Instruct",
+  },
   // ─── Mistral ─────────────────────────────────────────────────────────────
   {
     slug: "mistral-7b",
@@ -195,6 +223,20 @@ export const LLM_MODELS: LlmModel[] = [
     license: "Apache 2.0",
     releaseDate: "2025-03",
     hfRepo: "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+  },
+  {
+    slug: "devstral-small-24b",
+    name: "Devstral Small 24B",
+    family: "Mistral",
+    paramsB: 23.57,
+    activeParamsB: null,
+    kvBytesPerToken: 163_840, // 40 × 8 × 128
+    slidingWindowKv: null,
+    maxContextTokens: 131_072,
+    quants: GGUF_QUANTS,
+    license: "Apache 2.0",
+    releaseDate: "2025-07",
+    hfRepo: "mistralai/Devstral-Small-2507",
   },
   // ─── Gemma ───────────────────────────────────────────────────────────────
   // Gemma 3: every 6th layer uses global attention, the rest a 1024-token sliding window.
@@ -269,6 +311,23 @@ export const LLM_MODELS: LlmModel[] = [
     license: "MIT",
     releaseDate: "2025-01",
     hfRepo: "deepseek-ai/DeepSeek-R1",
+  },
+  // ─── GLM ─────────────────────────────────────────────────────────────────
+  // Multi-head latent attention, like DeepSeek. The parameter count includes the
+  // multi-token-prediction layer from the published checkpoint.
+  {
+    slug: "glm-4-7-flash",
+    name: "GLM-4.7-Flash 30B-A3B",
+    family: "GLM",
+    paramsB: 31.22,
+    activeParamsB: 3, // "30B-A3B" per the model card
+    kvBytesPerToken: 54_144, // 47 × (512 + 64) × 2
+    slidingWindowKv: null,
+    maxContextTokens: 202_752,
+    quants: GGUF_QUANTS,
+    license: "MIT",
+    releaseDate: "2026-01",
+    hfRepo: "zai-org/GLM-4.7-Flash",
   },
   // ─── gpt-oss ─────────────────────────────────────────────────────────────
   // Released in MXFP4; half the layers use a 128-token sliding window.

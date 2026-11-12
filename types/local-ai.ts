@@ -8,7 +8,7 @@ export interface QuantLevel {
   description: string;
 }
 
-export type LlmFamily = "Llama" | "Qwen" | "Mistral" | "Gemma" | "Phi" | "DeepSeek" | "gpt-oss";
+export type LlmFamily = "Llama" | "Qwen" | "Mistral" | "Gemma" | "Phi" | "DeepSeek" | "GLM" | "gpt-oss";
 
 // Layers with sliding-window attention only cache the last `windowTokens` tokens.
 export interface SlidingWindowKv {

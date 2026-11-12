@@ -18,7 +18,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     levelsPassed: 3,
     levelsPassedTestsFirst: 4,
     ranPartlyOnCpu: true,
-    calculatorSlug: null,
+    calculatorSlug: "qwen3-coder-30b-a3b",
   },
   {
     ollamaTag: "glm-4.7-flash",
@@ -27,7 +27,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     levelsPassed: 3,
     levelsPassedTestsFirst: 5,
     ranPartlyOnCpu: true,
-    calculatorSlug: null,
+    calculatorSlug: "glm-4-7-flash",
   },
   {
     ollamaTag: "gpt-oss:20b",
@@ -45,7 +45,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     levelsPassed: 0,
     levelsPassedTestsFirst: null,
     ranPartlyOnCpu: false,
-    calculatorSlug: null,
+    calculatorSlug: "devstral-small-24b",
   },
   {
     ollamaTag: "qwen2.5-coder:14b",
@@ -54,7 +54,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     levelsPassed: 0,
     levelsPassedTestsFirst: null,
     ranPartlyOnCpu: false,
-    calculatorSlug: null,
+    calculatorSlug: "qwen2-5-coder-14b",
   },
 ];
 
@@ -66,6 +66,33 @@ export function formatAgenticTestScore(result: AgenticTestResult): string {
   const alone = `${result.levelsPassed} of ${AGENTIC_TEST_LEVELS}`;
   if (result.levelsPassedTestsFirst === null) return alone;
   return `${alone} alone, ${result.levelsPassedTestsFirst} of ${AGENTIC_TEST_LEVELS} with tests written first`;
+}
+
+export interface AgenticTestSummary {
+  total: number;
+  passedNone: number;
+  passedSome: number;
+  testsFirstRuns: number;      // models run with tests first on every level
+  testsFirstImproved: number;  // of those, how many passed more levels than alone
+}
+
+export function summarizeAgenticResults(results: AgenticTestResult[]): AgenticTestSummary {
+  const testsFirst = results.filter((r) => r.levelsPassedTestsFirst !== null);
+  const passedNone = results.filter((r) => r.levelsPassed === 0).length;
+  return {
+    total: results.length,
+    passedNone,
+    passedSome: results.length - passedNone,
+    testsFirstRuns: testsFirst.length,
+    testsFirstImproved: testsFirst.filter((r) => (r.levelsPassedTestsFirst ?? 0) > r.levelsPassed).length,
+  };
+}
+
+// "all 2", "1 of the 2": how many tests-first runs passed more levels than alone.
+export function describeTestsFirstGain(summary: AgenticTestSummary): string {
+  const { testsFirstImproved: improved, testsFirstRuns: runs } = summary;
+  if (improved === runs) return runs === 2 ? "both" : `all ${runs}`;
+  return `${improved} of the ${runs}`;
 }
 
 export function getAgenticTestResult(calculatorSlug: string): AgenticTestResult | undefined {

@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slug";
 import { LLM_MODELS } from "@/lib/llm-models";
 import { pairPath, sitemapPairs } from "@/lib/pair-pages";
 import { SITE_URL } from "@/lib/site";
+import { CODING_AGENTS_PATH } from "@/lib/coding-agents";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [cpus, gpus] = await Promise.all([getCpus(), getGpus()]);
@@ -27,6 +28,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "monthly",
     priority: 0.8,
   }));
+
+  localAiUrls.push({ url: `${SITE_URL}${CODING_AGENTS_PATH}`, changeFrequency: "monthly", priority: 0.8 });
 
   const pairUrls: MetadataRoute.Sitemap = sitemapPairs(cpus, gpus).map(({ cpu, gpu }) => ({
     url: `${SITE_URL}${pairPath(cpu.modelName, gpu.modelName)}`,

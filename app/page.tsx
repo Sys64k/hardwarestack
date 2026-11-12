@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { AGENTIC_TEST_VRAM_GB } from "@/lib/agentic-coding-test";
+import { CODING_AGENTS_PATH } from "@/lib/coding-agents";
 import { MethodologySection } from "@/components/calculator/MethodologySection";
 import { CalculatorSection } from "@/components/CalculatorSection";
 import { ToolTabs } from "@/components/ToolTabs";
@@ -36,6 +39,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           Select your CPU and GPU to instantly calculate which component limits
           your gaming performance — and by how much.
         </p>
+        <Link
+          href={CODING_AGENTS_PATH}
+          className="mt-3 inline-block text-xs text-slate-500 underline hover:text-slate-800"
+        >
+          From my own tests: which local AI models can drive a coding agent on a {AGENTIC_TEST_VRAM_GB} GB GPU →
+        </Link>
       </div>
 
       {cpus.length === 0 || gpus.length === 0 ? (

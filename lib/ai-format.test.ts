@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatGb, formatSpeed } from "./ai-format";
+import { formatContext, formatGb, formatSpeed } from "./ai-format";
 import { defaultQuant, getLlmModel } from "./llm-models";
 
 describe("formatting", () => {
@@ -10,6 +10,8 @@ describe("formatting", () => {
     expect(formatSpeed(2.43)).toBe("~2.4 tok/s");
     expect(formatSpeed(38.9)).toBe("~39 tok/s");
     expect(formatSpeed(null)).toBe("—");
+    expect(formatContext(32_768)).toBe("32K");
+    expect(formatContext(131_072)).toBe("128K");
   });
 });
 
