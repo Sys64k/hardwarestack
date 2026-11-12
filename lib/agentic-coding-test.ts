@@ -8,7 +8,9 @@ export const AGENTIC_TEST_LEVELS = 5;
 export const AGENTIC_TEST_VRAM_GB = 16;
 export const AGENTIC_TEST_GPU = `RTX 5060 Ti ${AGENTIC_TEST_VRAM_GB} GB`;
 export const AGENTIC_TEST_CAVEAT = `One small coding test: ${AGENTIC_TEST_LEVELS} tasks, one run each. It's a single data point, not a ranking of the models.`;
-export const AGENTIC_TEST_CPU_NOTE = `Didn't fit in ${AGENTIC_TEST_VRAM_GB} GB; partly ran on the CPU`;
+// Checked with `ollama ps` on the test machine: with the desktop holding about 2 GB, none
+// of the five fit entirely in VRAM at the test's context.
+export const AGENTIC_TEST_CPU_NOTE = `On the ${AGENTIC_TEST_VRAM_GB} GB test GPU every model ran partly on the CPU at the test's context; that makes a model slower, not worse.`;
 
 export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
   {
@@ -17,8 +19,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     anchor: "qwen3-coder-30b",
     levelsPassed: 3,
     levelsPassedTestsFirst: 4,
-    ranPartlyOnCpu: true,
-    calculatorSlug: null,
+    calculatorSlug: "qwen3-coder-30b-a3b",
   },
   {
     ollamaTag: "glm-4.7-flash",
@@ -26,8 +27,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     anchor: "glm-47-flash-30b",
     levelsPassed: 3,
     levelsPassedTestsFirst: 5,
-    ranPartlyOnCpu: true,
-    calculatorSlug: null,
+    calculatorSlug: "glm-4-7-flash",
   },
   {
     ollamaTag: "gpt-oss:20b",
@@ -35,7 +35,6 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     anchor: "gpt-oss-20b",
     levelsPassed: 3,
     levelsPassedTestsFirst: null,
-    ranPartlyOnCpu: false,
     calculatorSlug: "gpt-oss-20b",
   },
   {
@@ -44,8 +43,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     anchor: "devstral-24b",
     levelsPassed: 0,
     levelsPassedTestsFirst: null,
-    ranPartlyOnCpu: false,
-    calculatorSlug: null,
+    calculatorSlug: "devstral-small-24b",
   },
   {
     ollamaTag: "qwen2.5-coder:14b",
@@ -53,8 +51,7 @@ export const AGENTIC_TEST_RESULTS: AgenticTestResult[] = [
     anchor: "qwen25-coder-14b",
     levelsPassed: 0,
     levelsPassedTestsFirst: null,
-    ranPartlyOnCpu: false,
-    calculatorSlug: null,
+    calculatorSlug: "qwen2-5-coder-14b",
   },
 ];
 
@@ -66,6 +63,33 @@ export function formatAgenticTestScore(result: AgenticTestResult): string {
   const alone = `${result.levelsPassed} of ${AGENTIC_TEST_LEVELS}`;
   if (result.levelsPassedTestsFirst === null) return alone;
   return `${alone} alone, ${result.levelsPassedTestsFirst} of ${AGENTIC_TEST_LEVELS} with tests written first`;
+}
+
+export interface AgenticTestSummary {
+  total: number;
+  passedNone: number;
+  passedSome: number;
+  testsFirstRuns: number;      // models run with tests first on every level
+  testsFirstImproved: number;  // of those, how many passed more levels than alone
+}
+
+export function summarizeAgenticResults(results: AgenticTestResult[]): AgenticTestSummary {
+  const testsFirst = results.filter((r) => r.levelsPassedTestsFirst !== null);
+  const passedNone = results.filter((r) => r.levelsPassed === 0).length;
+  return {
+    total: results.length,
+    passedNone,
+    passedSome: results.length - passedNone,
+    testsFirstRuns: testsFirst.length,
+    testsFirstImproved: testsFirst.filter((r) => (r.levelsPassedTestsFirst ?? 0) > r.levelsPassed).length,
+  };
+}
+
+// "all 2", "1 of the 2": how many tests-first runs passed more levels than alone.
+export function describeTestsFirstGain(summary: AgenticTestSummary): string {
+  const { testsFirstImproved: improved, testsFirstRuns: runs } = summary;
+  if (improved === runs) return runs === 2 ? "both" : `all ${runs}`;
+  return `${improved} of the ${runs}`;
 }
 
 export function getAgenticTestResult(calculatorSlug: string): AgenticTestResult | undefined {

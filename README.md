@@ -11,6 +11,7 @@ Live at **[hardwarestack.dev](https://hardwarestack.dev)**
 | `/` | Bottleneck calculator (CPU, GPU, optional RAM, resolution) |
 | `/cpu/[slug]`, `/gpu/[slug]` | Specs and pairing table per component |
 | `/bottleneck/[cpu]-vs-[gpu]` | Static result for one CPU + GPU pair at 1080p, 1440p and 4K, with related pairs. Every scored pair resolves; only pairs at most one tier apart go in the sitemap (`lib/pair-pages.ts`) |
+| `/local-ai/coding-agents` | Agentic coding test results with VRAM estimates and the smallest GPU per model |
 | `/local-ai`, `/local-ai/[model]` | Local AI calculator and per-model VRAM pages, plus agentic coding test results from the ASO experiment (data in `lib/agentic-coding-test.ts`) |
 
 ## Stack

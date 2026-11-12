@@ -6,6 +6,8 @@ import {
   agenticTestResultUrl,
   formatAgenticTestScore,
   getAgenticTestResult,
+  describeTestsFirstGain,
+  summarizeAgenticResults,
 } from "./agentic-coding-test";
 import { getLlmModel } from "./llm-models";
 import type { AgenticTestResult } from "@/types/local-ai";
@@ -17,7 +19,6 @@ function result(overrides: Partial<AgenticTestResult>): AgenticTestResult {
     anchor: "x-1b",
     levelsPassed: 2,
     levelsPassedTestsFirst: null,
-    ranPartlyOnCpu: false,
     calculatorSlug: null,
     ...overrides,
   };
@@ -51,9 +52,14 @@ describe("agentic coding test data", () => {
     for (const a of anchors) expect(a).toMatch(/^[a-z0-9-]+$/);
   });
 
-  it("only links to calculator models that exist", () => {
+  it("doesn't let a model slug shadow the /local-ai/coding-agents page", () => {
+    expect(getLlmModel("coding-agents")).toBeUndefined();
+  });
+
+  it("links every tested model to a calculator model that exists", () => {
     for (const r of AGENTIC_TEST_RESULTS) {
-      if (r.calculatorSlug !== null) expect(getLlmModel(r.calculatorSlug)).toBeDefined();
+      expect(r.calculatorSlug).not.toBeNull();
+      expect(getLlmModel(r.calculatorSlug!)).toBeDefined();
     }
   });
 });
@@ -91,5 +97,55 @@ describe("getAgenticTestResult", () => {
 
   it("returns undefined for an unknown slug", () => {
     expect(getAgenticTestResult("no-such-model")).toBeUndefined();
+  });
+});
+
+describe("summarizeAgenticResults", () => {
+  it("summarises the published results", () => {
+    expect(summarizeAgenticResults(AGENTIC_TEST_RESULTS)).toEqual({
+      total: 5,
+      passedNone: 2,
+      passedSome: 3,
+      testsFirstRuns: 2,
+      testsFirstImproved: 2,
+    });
+  });
+
+  it("doesn't count a tests-first run that passed no more levels", () => {
+    const s = summarizeAgenticResults([result({ levelsPassed: 3, levelsPassedTestsFirst: 3 })]);
+    expect(s.testsFirstRuns).toBe(1);
+    expect(s.testsFirstImproved).toBe(0);
+  });
+
+  it("handles an empty list", () => {
+    expect(summarizeAgenticResults([])).toEqual({
+      total: 0,
+      passedNone: 0,
+      passedSome: 0,
+      testsFirstRuns: 0,
+      testsFirstImproved: 0,
+    });
+  });
+});
+
+describe("describeTestsFirstGain", () => {
+  const summary = (testsFirstImproved: number, testsFirstRuns: number) => ({
+    total: 5,
+    passedNone: 0,
+    passedSome: 5,
+    testsFirstRuns,
+    testsFirstImproved,
+  });
+
+  it("says both when the two runs both improved", () => {
+    expect(describeTestsFirstGain(summary(2, 2))).toBe("both");
+  });
+
+  it("says all N for more than two", () => {
+    expect(describeTestsFirstGain(summary(3, 3))).toBe("all 3");
+  });
+
+  it("gives a fraction when only some improved", () => {
+    expect(describeTestsFirstGain(summary(1, 3))).toBe("1 of the 3");
   });
 });

@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getAgenticTestResult } from "@/lib/agentic-coding-test";
 import { checkFit, estimateMemory, minVramGb } from "@/lib/ai-fit";
-import { formatGb, formatSpeed } from "@/lib/ai-format";
+import { formatContext, formatGb, formatSpeed } from "@/lib/ai-format";
 import { getGpus } from "@/lib/hardware-queries";
 import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmModel } from "@/lib/llm-models";
 import { cn } from "@/lib/utils";
@@ -24,10 +24,6 @@ const TIER_RANK: Record<string, number> = { ENTRY: 0, MID: 1, HIGH: 2, ULTRA: 3,
 
 function formatParams(billions: number): string {
   return `${Number(billions.toFixed(1))}B`;
-}
-
-function formatContext(tokens: number): string {
-  return `${tokens / 1024}K`;
 }
 
 function formatRelease(yyyyMm: string): string {

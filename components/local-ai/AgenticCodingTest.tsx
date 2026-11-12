@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import {
   AGENTIC_TEST_CAVEAT,
@@ -9,14 +10,29 @@ import {
   agenticTestResultUrl,
   formatAgenticTestScore,
 } from "@/lib/agentic-coding-test";
+import { CODING_AGENTS_PATH } from "@/lib/coding-agents";
 import type { AgenticTestResult } from "@/types/local-ai";
+
+// Score linked to the model's section of the results page.
+export function AgenticScore({ result }: { result: AgenticTestResult }) {
+  return (
+    <a
+      href={agenticTestResultUrl(result)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900"
+    >
+      {formatAgenticTestScore(result)} <ExternalLink className="h-3 w-3 text-slate-400" />
+    </a>
+  );
+}
 
 export function AgenticCodingTest() {
   return (
     <section className="mt-12 border-t border-slate-200 pt-10">
       <h2 className="text-lg font-bold text-slate-900 mb-1">Agentic coding test</h2>
       <p className="text-sm text-slate-500 mb-6 max-w-2xl">
-        From my own ASO experiment: five Ollama models each drove a coding agent through a ladder of{" "}
+        From my own ASO experiment: {AGENTIC_TEST_RESULTS.length} Ollama models each drove a coding agent through a ladder of{" "}
         {AGENTIC_TEST_LEVELS} tasks on an {AGENTIC_TEST_GPU}. {AGENTIC_TEST_CAVEAT}
       </p>
 
@@ -32,20 +48,20 @@ export function AgenticCodingTest() {
             {AGENTIC_TEST_RESULTS.map((r) => (
               <tr key={r.ollamaTag} className="border-b border-slate-100 last:border-0">
                 <td className="px-4 py-2.5">
-                  <a
-                    href={agenticTestResultUrl(r)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-slate-800 hover:text-slate-600"
-                  >
-                    <code className="font-mono text-[13px]">{r.ollamaTag}</code>
-                    <ExternalLink className="h-3 w-3 text-slate-400" />
-                  </a>
-                  {r.ranPartlyOnCpu && (
-                    <p className="text-[11px] text-slate-400">{AGENTIC_TEST_CPU_NOTE}</p>
+                  {r.calculatorSlug ? (
+                    <Link
+                      href={`/local-ai/${r.calculatorSlug}`}
+                      className="font-mono text-[13px] font-medium text-slate-800 hover:text-slate-600"
+                    >
+                      {r.ollamaTag}
+                    </Link>
+                  ) : (
+                    <code className="font-mono text-[13px] font-medium text-slate-800">{r.ollamaTag}</code>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-right text-slate-700">{formatAgenticTestScore(r)}</td>
+                <td className="px-4 py-2.5 text-right">
+                  <AgenticScore result={r} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -53,10 +69,14 @@ export function AgenticCodingTest() {
       </div>
 
       <p className="mt-3 text-xs text-slate-400 max-w-2xl">
-        Running partly on the CPU makes a model slower, not worse.{" "}
+        {AGENTIC_TEST_CPU_NOTE}{" "}
         <a href={AGENTIC_TEST_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-600">
           Full results and method
         </a>
+        , or{" "}
+        <Link href={CODING_AGENTS_PATH} className="underline hover:text-slate-600">
+          see how much VRAM each model needs
+        </Link>
         .
       </p>
     </section>
@@ -79,6 +99,9 @@ export function AgenticCodingTestBadge({ result }: { result: AgenticTestResult }
       >
         See the result <ExternalLink className="h-3 w-3" />
       </a>
+      <Link href={CODING_AGENTS_PATH} className="mt-1 block text-xs text-slate-500 hover:text-slate-800">
+        Compare all {AGENTIC_TEST_RESULTS.length} tested models →
+      </Link>
     </div>
   );
 }
