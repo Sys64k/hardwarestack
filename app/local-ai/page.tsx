@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LocalAiCalculator } from "@/components/local-ai/LocalAiCalculator";
 import type { LocalAiGpu } from "@/components/local-ai/LocalAiCalculator";
+import { AgenticCodingTest } from "@/components/local-ai/AgenticCodingTest";
 import { LocalAiMethodology } from "@/components/local-ai/LocalAiMethodology";
 import { getGpus } from "@/lib/hardware-queries";
 import { ToolTabs } from "@/components/ToolTabs";
@@ -41,6 +42,7 @@ export default async function LocalAiPage({ searchParams }: LocalAiPageProps) {
       </div>
 
       <LocalAiCalculator gpus={gpus} defaultGpuId={gpuId} defaultModelSlug={model} />
+      <AgenticCodingTest />
       <LocalAiMethodology />
     </main>
   );

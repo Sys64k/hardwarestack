@@ -31,3 +31,14 @@ export interface LlmModel {
   releaseDate: string;           // YYYY-MM
   hfRepo: string;
 }
+
+// One model's result in the ASO agentic coding test (github.com/Sys64k/ai-swarm-orchestrator).
+export interface AgenticTestResult {
+  ollamaTag: string;               // the model as run, e.g. "qwen3-coder:30b"
+  name: string;                    // display name
+  anchor: string;                  // heading anchor on the results page, without "#"
+  levelsPassed: number;            // levels passed with the model working alone
+  levelsPassedTestsFirst: number | null; // levels passed with tests written first; null when not run on all levels
+  ranPartlyOnCpu: boolean;         // weights didn't fit in the test GPU's VRAM
+  calculatorSlug: string | null;   // matching LlmModel slug, when the calculator has the model
+}
