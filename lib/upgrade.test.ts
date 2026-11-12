@@ -10,7 +10,7 @@ import {
   planUpgrade,
 } from "./upgrade";
 import type { CpuUpgradeOption } from "./upgrade";
-import { SOCKET_GENERATIONS, SOCKET_ORDER, SOCKET_RAM_COMPAT, isOlderPlatform, isRamCompatible, ramTypesForSocket } from "./platform";
+import { SOCKET_ERA, SOCKET_ORDER, SOCKET_RAM_COMPAT, isOlderPlatform, isRamCompatible, ramTypesForSocket } from "./platform";
 import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 const cpu = (id: string, o: Partial<CpuOption> = {}): CpuOption => ({
@@ -91,21 +91,36 @@ describe("isRamCompatible", () => {
 });
 
 describe("socket tables", () => {
-  it("list every socket in the RAM table, the order and a generation line", () => {
-    const generations = SOCKET_GENERATIONS.flat();
+  it("list every socket in the RAM table, the order and the era table", () => {
     expect(Object.keys(SOCKET_RAM_COMPAT).sort()).toEqual([...SOCKET_ORDER].sort());
-    expect([...generations].sort()).toEqual([...SOCKET_ORDER].sort());
+    expect(Object.keys(SOCKET_ERA).sort()).toEqual([...SOCKET_ORDER].sort());
   });
 });
 
 describe("isOlderPlatform", () => {
-  it("compares generations within a vendor only", () => {
+  it("flags older platforms from the same vendor", () => {
     expect(isOlderPlatform("AM5", "AM4")).toBe(true);
     expect(isOlderPlatform("AM4", "AM5")).toBe(false);
     expect(isOlderPlatform("LGA1851", "LGA1700")).toBe(true);
     expect(isOlderPlatform("LGA1200", "LGA1851")).toBe(false);
-    expect(isOlderPlatform("AM5", "LGA1700")).toBe(false);
+  });
+
+  it("flags older platforms from the other vendor", () => {
+    expect(isOlderPlatform("LGA1700", "AM4")).toBe(true);
+    expect(isOlderPlatform("AM5", "LGA1700")).toBe(true);
+    expect(isOlderPlatform("LGA1851", "LGA1200")).toBe(true);
+    expect(isOlderPlatform("AM4", "LGA1700")).toBe(false);
+  });
+
+  it("allows moves between platforms of the same era", () => {
+    expect(isOlderPlatform("LGA1851", "AM5")).toBe(false);
+    expect(isOlderPlatform("AM5", "LGA1851")).toBe(false);
+    expect(isOlderPlatform("LGA1200", "AM4")).toBe(false);
+  });
+
+  it("treats unknown sockets as not older", () => {
     expect(isOlderPlatform("AM5", "TR5")).toBe(false);
+    expect(isOlderPlatform("TR5", "AM4")).toBe(false);
   });
 });
 
@@ -197,14 +212,24 @@ describe("planCpuUpgrade", () => {
     expect(plan.options.map((o) => o.cpu.id)).toEqual(["Ryzen 7 5800X3D"]);
   });
 
-  it("never suggests moving back to an older socket from the same vendor", () => {
+  it("never suggests moving to an older platform, from either vendor", () => {
     const r7600 = cpu("Ryzen 5 7600", { socket: "AM5", tier: "ENTRY", singleCoreScore: 1500 });
-    const plan = planCpuUpgrade(r7600, [r7600, am4Fast, am5Top, intel], ddr4, (c) => c.socket === "LGA1700");
+    const arrow = cpu("265k", { vendor: "INTEL", socket: "LGA1851", tier: "HIGH", singleCoreScore: 2000 });
+    const all = [r7600, am4Fast, am5Top, intel, arrow];
+    const resolvesOffAm5 = (c: CpuOption) => c.socket !== "AM5";
+    const plan = planCpuUpgrade(r7600, all, ddr4, resolvesOffAm5);
     if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
     expect(plan.options.map((o) => [o.cpu.id, o.platform?.socket ?? null])).toEqual([
       ["7950x", null],
-      ["13600k", "LGA1700"],
+      ["265k", "LGA1851"],
     ]);
+  });
+
+  it("offers no platform upgrade when every resolving socket is older", () => {
+    const r7600 = cpu("Ryzen 5 7600", { socket: "AM5", tier: "ENTRY", singleCoreScore: 1500 });
+    const plan = planCpuUpgrade(r7600, [r7600, am4Fast, am5Top, intel], ddr4, (c) => c.socket !== "AM5");
+    if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    expect(plan.options.map((o) => [o.cpu.id, o.platform?.socket ?? null])).toEqual([["7950x", null]]);
   });
 
   it("goes straight to a platform upgrade when nothing faster shares the socket", () => {
