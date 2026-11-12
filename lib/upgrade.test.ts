@@ -89,10 +89,16 @@ describe("planCpuUpgrade", () => {
     const plan = planCpuUpgrade(current, ALL, ddr4, (c) => c.socket !== "AM4");
     expect(plan?.kind).toBe("CPU");
     if (plan?.kind !== "CPU") return;
-    expect(plan.options).toHaveLength(2);
+    expect(plan.options).toHaveLength(3);
     expect(plan.options[0]).toEqual({ cpu: am4Fast, resolves: false, platform: null });
-    // Lowest-ranked fix across vendors: the 13600K (HIGH, 1950) ranks below the 7700X (HIGH, 2000).
+    // Lowest-ranked fix across vendors is the 13600K (HIGH, 1950, below the 7700X's 2000),
+    // so the best AMD platform upgrade is offered first.
     expect(plan.options[1]).toEqual({
+      cpu: am5,
+      resolves: true,
+      platform: { socket: "AM5", ramTypes: ["DDR5"], needsNewRam: true },
+    });
+    expect(plan.options[2]).toEqual({
       cpu: intel,
       resolves: true,
       platform: { socket: "LGA1700", ramTypes: ["DDR4", "DDR5"], needsNewRam: false },
@@ -116,9 +122,27 @@ describe("planCpuUpgrade", () => {
   it("falls back to the strongest options when nothing removes the bottleneck", () => {
     const plan = planCpuUpgrade(current, ALL, ddr4, () => false);
     if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    // The strongest new-socket CPU is the 7950X, same vendor, so no extra option.
     expect(plan.options.map((o) => [o.cpu.id, o.resolves])).toEqual([
       ["5800x3d", false],
       ["7950x", false],
+    ]);
+  });
+
+  it("skips the same-vendor option when the vendor has nothing on a new socket", () => {
+    const intelOnly = planCpuUpgrade(current, [current, intel], ddr4, () => true);
+    if (intelOnly?.kind !== "CPU") throw new Error("expected a CPU plan");
+    expect(intelOnly.options.map((o) => o.cpu.id)).toEqual(["13600k"]);
+  });
+
+  it("works the same way for Intel owners", () => {
+    const i5 = cpu("12400", { vendor: "INTEL", socket: "LGA1700", tier: "MID", singleCoreScore: 1700 });
+    const plan = planCpuUpgrade(i5, [i5, am5, intel], ddr4, (c) => c.socket === "AM5");
+    if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    // The 13600K is a drop-in that doesn't fix it; AM5 does, and Intel has no new-socket CPU here.
+    expect(plan.options.map((o) => [o.cpu.id, o.resolves, o.platform?.socket ?? null])).toEqual([
+      ["13600k", false, null],
+      ["7700x", true, "AM5"],
     ]);
   });
 
@@ -267,7 +291,7 @@ describe("describeCpuOption", () => {
 });
 
 describe("describePlan", () => {
-  it("labels drop-in and platform rows when there are two", () => {
+  it("labels each row, naming vendors when both offer a platform upgrade", () => {
     const plan = planCpuUpgrade(current, ALL, ddr4, (c) => c.socket !== "AM4")!;
     expect(describePlan(plan, current, ddr4)).toEqual([
       {
@@ -276,11 +300,21 @@ describe("describePlan", () => {
         note: "Fits your current AM4 motherboard. Reduces the bottleneck but doesn't remove it.",
       },
       {
+        modelName: "7700x",
+        label: "Platform upgrade · AMD",
+        note: "Needs a new AM5 motherboard and DDR5 RAM.",
+      },
+      {
         modelName: "13600k",
-        label: "Platform upgrade",
+        label: "Platform upgrade · Intel",
         note: "Needs a new LGA1700 motherboard; pick a DDR4 board to keep your RAM.",
       },
     ]);
+  });
+
+  it("leaves out the vendor when only one platform upgrade is shown", () => {
+    const plan = planCpuUpgrade(current, [current, am4Fast, am5], ddr4, (c) => c.socket === "AM5")!;
+    expect(describePlan(plan, current, ddr4).map((s) => s.label)).toEqual(["Drop-in", "Platform upgrade"]);
   });
 
   it("omits the label for a single CPU option", () => {

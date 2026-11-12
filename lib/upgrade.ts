@@ -63,6 +63,8 @@ function platformChange(socket: string, ram: RamOption | undefined): PlatformCha
 
 // Same-socket drop-in first. A platform change is only suggested when no drop-in removes
 // the bottleneck, and then from any vendor, since a new motherboard is needed either way.
+// If that pick is from the other vendor, the best same-vendor platform upgrade is offered
+// too (listed first), since most people stay with their vendor.
 export function planCpuUpgrade(
   cpu: CpuOption,
   cpus: CpuOption[],
@@ -83,8 +85,12 @@ export function planCpuUpgrade(
   if (dropIn) options.push({ cpu: dropIn.item, resolves: dropIn.resolves, platform: null });
 
   if (!dropIn?.resolves) {
-    const other = pick(faster.filter((c) => c.socket !== null && c.socket !== cpu.socket), resolves);
-    if (other) options.push({ cpu: other.item, resolves: other.resolves, platform: platformChange(other.item.socket!, ram) });
+    const newSocket = faster.filter((c) => c.socket !== null && c.socket !== cpu.socket);
+    const any = pick(newSocket, resolves);
+    const sameVendor = any && any.item.vendor !== cpu.vendor ? pick(newSocket.filter((c) => c.vendor === cpu.vendor), resolves) : null;
+    for (const p of [sameVendor, any]) {
+      if (p) options.push({ cpu: p.item, resolves: p.resolves, platform: platformChange(p.item.socket!, ram) });
+    }
   }
 
   return options.length > 0 ? { kind: "CPU", currentSocket: cpu.socket, options } : null;
@@ -173,13 +179,21 @@ export function describeRamOption(cpu: CpuOption): string | null {
   return ramTypesForSocket(cpu.socket) ? `Fits your ${cpu.socket} motherboard.` : null;
 }
 
+const VENDOR_NAMES: Record<CpuOption["vendor"], string> = { AMD: "AMD", INTEL: "Intel", NVIDIA: "NVIDIA" };
+
+function cpuOptionLabel(option: CpuUpgradeOption, nameVendor: boolean): string {
+  if (!option.platform) return "Drop-in";
+  return nameVendor ? `Platform upgrade · ${VENDOR_NAMES[option.cpu.vendor]}` : "Platform upgrade";
+}
+
 export function describePlan(plan: UpgradePlan, cpu: CpuOption, ram: RamOption | undefined): UpgradeSuggestion[] {
   if (plan.kind === "GPU") return [{ modelName: plan.gpu.modelName, label: null, note: null }];
   if (plan.kind === "RAM") return [{ modelName: plan.ram.modelName, label: null, note: describeRamOption(cpu) }];
-  const both = plan.options.length > 1;
+  const several = plan.options.length > 1;
+  const platformVendors = new Set(plan.options.filter((o) => o.platform).map((o) => o.cpu.vendor));
   return plan.options.map((option) => ({
     modelName: option.cpu.modelName,
-    label: both ? (option.platform ? "Platform upgrade" : "Drop-in") : null,
+    label: several ? cpuOptionLabel(option, platformVendors.size > 1) : null,
     note: describeCpuOption(option, plan.currentSocket, ram?.type ?? null),
   }));
 }
