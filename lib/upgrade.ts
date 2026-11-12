@@ -1,5 +1,5 @@
 import { calculateBottleneck } from "./bottleneck";
-import { isRamCompatible, ramTypesForSocket } from "./platform";
+import { isOlderPlatform, isRamCompatible, ramTypesForSocket } from "./platform";
 import type {
   BottleneckComponent,
   CpuOption,
@@ -47,12 +47,39 @@ function byCpuRank(a: CpuOption, b: CpuOption): number {
   return at - bt || as - bs;
 }
 
-// Lowest-ranked candidate that removes the bottleneck, else the strongest one.
-function pick<T>(sorted: T[], resolves: (c: T) => boolean): { item: T; resolves: boolean } | null {
+// Gaming-oriented order for picking the strongest CPU when none removes the bottleneck.
+// Games rarely use more than 8 cores, and X3D chips' extra cache is worth roughly 20%
+// in CPU-bound games. Only used to choose an upgrade; bottleneck verdicts don't use it.
+const GAMING_CORE_CAP = 8;
+const X3D_GAMING_BONUS = 1.2;
+
+// AMD's 3D V-Cache parts carry "X3D" in the model name.
+function isX3d(c: CpuOption): boolean {
+  return /X3D/i.test(c.modelName);
+}
+
+// Exported for tests. log2(cores + 1) gives diminishing returns per core, as in the
+// bottleneck model's CPU score.
+export function cpuGamingOrderScore(c: CpuOption): number {
+  const cores = Math.min(c.cores, GAMING_CORE_CAP);
+  const cache = isX3d(c) ? X3D_GAMING_BONUS : 1;
+  return (c.singleCoreScore ?? 0) * Math.log2(cores + 1) * cache;
+}
+
+// Lowest-ranked candidate that removes the bottleneck, else the strongest one: the
+// highest `score` when given (CPUs), otherwise the last in sort order (GPUs, RAM).
+function pick<T>(
+  sorted: T[],
+  resolves: (c: T) => boolean,
+  score?: (c: T) => number,
+): { item: T; resolves: boolean } | null {
   const fix = sorted.find(resolves);
   if (fix) return { item: fix, resolves: true };
-  const strongest = sorted[sorted.length - 1];
-  return strongest ? { item: strongest, resolves: false } : null;
+  if (sorted.length === 0) return null;
+  const best = score
+    ? sorted.reduce((a, b) => (score(b) > score(a) ? b : a))
+    : sorted[sorted.length - 1];
+  return { item: best, resolves: false };
 }
 
 function platformChange(socket: string, ram: RamOption | undefined): PlatformChange {
@@ -72,22 +99,27 @@ export function planCpuUpgrade(
   resolves: (candidate: CpuOption) => boolean,
 ): UpgradePlan | null {
   const faster = cpus.filter((c) => isFasterCpu(c, cpu)).sort(byCpuRank);
+  const pickCpu = (list: CpuOption[]) => pick(list, resolves, cpuGamingOrderScore);
 
   if (!cpu.socket) {
-    const picked = pick(faster.filter((c) => c.vendor === cpu.vendor), resolves);
+    const picked = pickCpu(faster.filter((c) => c.vendor === cpu.vendor));
     return picked
       ? { kind: "CPU", currentSocket: null, options: [{ cpu: picked.item, resolves: picked.resolves, platform: null }] }
       : null;
   }
 
   const options: CpuUpgradeOption[] = [];
-  const dropIn = pick(faster.filter((c) => c.socket === cpu.socket), resolves);
+  const dropIn = pickCpu(faster.filter((c) => c.socket === cpu.socket));
   if (dropIn) options.push({ cpu: dropIn.item, resolves: dropIn.resolves, platform: null });
 
   if (!dropIn?.resolves) {
-    const newSocket = faster.filter((c) => c.socket !== null && c.socket !== cpu.socket);
-    const any = pick(newSocket, resolves);
-    const sameVendor = any && any.item.vendor !== cpu.vendor ? pick(newSocket.filter((c) => c.vendor === cpu.vendor), resolves) : null;
+    const currentSocket = cpu.socket; // narrowed to string for the closure below
+    const newSocket = faster.filter(
+      (c) => c.socket !== null && c.socket !== currentSocket && !isOlderPlatform(currentSocket, c.socket),
+    );
+    const any = pickCpu(newSocket);
+    const sameVendor =
+      any && any.item.vendor !== cpu.vendor ? pickCpu(newSocket.filter((c) => c.vendor === cpu.vendor)) : null;
     for (const p of [sameVendor, any]) {
       if (p) options.push({ cpu: p.item, resolves: p.resolves, platform: platformChange(p.item.socket!, ram) });
     }

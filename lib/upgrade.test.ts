@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  cpuGamingOrderScore,
   describeCpuOption,
   describePlan,
   upgradeHeadline,
@@ -9,7 +10,7 @@ import {
   planUpgrade,
 } from "./upgrade";
 import type { CpuUpgradeOption } from "./upgrade";
-import { isRamCompatible, ramTypesForSocket } from "./platform";
+import { SOCKET_GENERATIONS, SOCKET_ORDER, SOCKET_RAM_COMPAT, isOlderPlatform, isRamCompatible, ramTypesForSocket } from "./platform";
 import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 const cpu = (id: string, o: Partial<CpuOption> = {}): CpuOption => ({
@@ -57,6 +58,20 @@ const slower = cpu("3600", { tier: "ENTRY", singleCoreScore: 1300 });
 const ALL = [current, am4Fast, am4Mid, am5, am5Top, intel, slower];
 const ddr4 = ram("ddr4-3200", "DDR4", 3200);
 
+describe("cpuGamingOrderScore", () => {
+  it("caps cores at 8 and adds the X3D cache bonus", () => {
+    const eight = cpu("Ryzen 7 5800X", { cores: 8, singleCoreScore: 1700 });
+    const sixteen = cpu("Ryzen 9 5950X", { cores: 16, singleCoreScore: 1700 });
+    const x3d = cpu("Ryzen 7 5800X3D", { cores: 8, singleCoreScore: 1700 });
+    expect(cpuGamingOrderScore(sixteen)).toBe(cpuGamingOrderScore(eight));
+    expect(cpuGamingOrderScore(x3d)).toBeCloseTo(cpuGamingOrderScore(eight) * 1.2);
+  });
+
+  it("scores a CPU without a single-core score as 0", () => {
+    expect(cpuGamingOrderScore(cpu("x", { singleCoreScore: null }))).toBe(0);
+  });
+});
+
 describe("ramTypesForSocket", () => {
   it("maps known sockets and returns null for missing or unknown ones", () => {
     expect(ramTypesForSocket("AM5")).toEqual(["DDR5"]);
@@ -72,6 +87,25 @@ describe("isRamCompatible", () => {
     expect(isRamCompatible("AM4", "DDR5")).toBe(false);
     expect(isRamCompatible(null, "DDR5")).toBe(true);
     expect(isRamCompatible("TR5", "DDR4")).toBe(true);
+  });
+});
+
+describe("socket tables", () => {
+  it("list every socket in the RAM table, the order and a generation line", () => {
+    const generations = SOCKET_GENERATIONS.flat();
+    expect(Object.keys(SOCKET_RAM_COMPAT).sort()).toEqual([...SOCKET_ORDER].sort());
+    expect([...generations].sort()).toEqual([...SOCKET_ORDER].sort());
+  });
+});
+
+describe("isOlderPlatform", () => {
+  it("compares generations within a vendor only", () => {
+    expect(isOlderPlatform("AM5", "AM4")).toBe(true);
+    expect(isOlderPlatform("AM4", "AM5")).toBe(false);
+    expect(isOlderPlatform("LGA1851", "LGA1700")).toBe(true);
+    expect(isOlderPlatform("LGA1200", "LGA1851")).toBe(false);
+    expect(isOlderPlatform("AM5", "LGA1700")).toBe(false);
+    expect(isOlderPlatform("AM5", "TR5")).toBe(false);
   });
 });
 
@@ -143,6 +177,33 @@ describe("planCpuUpgrade", () => {
     expect(plan.options.map((o) => [o.cpu.id, o.resolves, o.platform?.socket ?? null])).toEqual([
       ["13600k", false, null],
       ["7700x", true, "AM5"],
+    ]);
+  });
+
+  it("falls back to the best gaming CPU, not the highest tier label", () => {
+    const r5950x = cpu("Ryzen 9 5950X", { tier: "ENTHUSIAST", cores: 16, singleCoreScore: 1700 });
+    const r5800x3d = cpu("Ryzen 7 5800X3D", { tier: "HIGH", cores: 8, singleCoreScore: 1700 });
+    const r3900x = cpu("Ryzen 9 3900X", { tier: "ULTRA", cores: 12, singleCoreScore: 1530 });
+    const plan = planCpuUpgrade(current, [current, r5950x, r5800x3d, r3900x], ddr4, () => false);
+    if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    expect(plan.options[0]).toEqual({ cpu: r5800x3d, resolves: false, platform: null });
+  });
+
+  it("still prefers the lowest-ranked CPU that removes the bottleneck", () => {
+    const r5950x = cpu("Ryzen 9 5950X", { tier: "ENTHUSIAST", cores: 16, singleCoreScore: 1700 });
+    const r5800x3d = cpu("Ryzen 7 5800X3D", { tier: "HIGH", cores: 8, singleCoreScore: 1700 });
+    const plan = planCpuUpgrade(current, [current, r5950x, r5800x3d], ddr4, () => true);
+    if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    expect(plan.options.map((o) => o.cpu.id)).toEqual(["Ryzen 7 5800X3D"]);
+  });
+
+  it("never suggests moving back to an older socket from the same vendor", () => {
+    const r7600 = cpu("Ryzen 5 7600", { socket: "AM5", tier: "ENTRY", singleCoreScore: 1500 });
+    const plan = planCpuUpgrade(r7600, [r7600, am4Fast, am5Top, intel], ddr4, (c) => c.socket === "LGA1700");
+    if (plan?.kind !== "CPU") throw new Error("expected a CPU plan");
+    expect(plan.options.map((o) => [o.cpu.id, o.platform?.socket ?? null])).toEqual([
+      ["7950x", null],
+      ["13600k", "LGA1700"],
     ]);
   });
 

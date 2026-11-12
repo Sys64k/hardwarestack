@@ -19,6 +19,20 @@ export const SOCKET_RAM_COMPAT: Record<string, RamTypeValue[]> = {
   LGA1851: ["DDR5"],
 };
 
+// Platform generations per vendor, oldest first. Used so a "platform upgrade" never
+// moves someone back to an older socket from the same vendor.
+// Each inner list is one vendor's line of sockets.
+export const SOCKET_GENERATIONS: readonly (readonly string[])[] = [
+  ["AM4", "AM5"],
+  ["LGA1200", "LGA1700", "LGA1851"],
+];
+
+// false also when either socket is unknown or they are on different vendors' lines.
+export function isOlderPlatform(current: string, candidate: string): boolean {
+  const line = SOCKET_GENERATIONS.find((l) => l.includes(current) && l.includes(candidate));
+  return line ? line.indexOf(candidate) < line.indexOf(current) : false;
+}
+
 // Unknown sockets count as compatible: better to show a kit than to hide every one.
 export function isRamCompatible(socket: string | null, ramType: RamTypeValue): boolean {
   const types = ramTypesForSocket(socket);
