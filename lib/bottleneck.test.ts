@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { calculateBottleneck } from "./bottleneck";
+import { calculateBottleneck, cpuGamingScore, estimatedCpuGamingScore } from "./bottleneck";
+import { measuredGamingIndex } from "./cpu-gaming-index";
 import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 const cpu = (overrides: Partial<CpuOption> = {}): CpuOption => ({
@@ -110,5 +111,38 @@ describe("calculateBottleneck", () => {
     );
     expect(result.bottleneckPercentage).toBeLessThan(1);
     expect(result.bottleneckComponent).toBe("Balanced");
+  });
+});
+
+describe("cpuGamingScore", () => {
+  it("uses the measured figure times the scale when there is one", () => {
+    expect(cpuGamingScore(cpu(), 80, 100)).toBe(8000);
+  });
+
+  it("falls back to the estimate without a measured figure", () => {
+    const c = cpu();
+    expect(cpuGamingScore(c, null, 100)).toBe(estimatedCpuGamingScore(c));
+  });
+
+  it("falls back to the estimate while the scale is not calibrated", () => {
+    const c = cpu();
+    expect(cpuGamingScore(c, 80, 0)).toBe(estimatedCpuGamingScore(c));
+  });
+});
+
+describe("measuredGamingIndex", () => {
+  const index = { "Intel Core i5-14600K": 90 };
+  const aliases = { "Intel Core i5-14600KF": "Intel Core i5-14600K" };
+
+  it("reads a listed CPU", () => {
+    expect(measuredGamingIndex("Intel Core i5-14600K", index, aliases)).toBe(90);
+  });
+
+  it("reads an alias through to its measured equivalent", () => {
+    expect(measuredGamingIndex("Intel Core i5-14600KF", index, aliases)).toBe(90);
+  });
+
+  it("returns null for an unlisted CPU", () => {
+    expect(measuredGamingIndex("Intel Core i5-14600", index, aliases)).toBeNull();
   });
 });

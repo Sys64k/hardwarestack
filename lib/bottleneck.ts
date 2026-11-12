@@ -5,6 +5,7 @@ import type {
   RamOption,
   Resolution,
 } from "@/types/hardware";
+import { GAMING_INDEX_TO_SCORE, measuredGamingIndex } from "./cpu-gaming-index";
 
 export const RESOLUTIONS: Resolution[] = ["1080p", "1440p", "4K"];
 
@@ -47,13 +48,23 @@ const TIER_CPU_SCALE: Record<string, number> = {
   ENTHUSIAST: 1.6,
 };
 
-// CPU gaming throughput: single-core speed × core-count boost × tier scale.
+// Estimated CPU gaming throughput: single-core speed × core-count boost × tier scale.
 // log2(cores+1) gives diminishing returns: 4c→2.3×, 8c→3.2×, 16c→4.1×, 24c→4.6×
-function cpuGamingScore(cpu: CpuOption): number {
+// Used only for CPUs without a measured figure in lib/cpu-gaming-index.ts.
+export function estimatedCpuGamingScore(cpu: CpuOption): number {
   const single = cpu.singleCoreScore ?? 0;
   const coreBoost = Math.log2((cpu.cores ?? 4) + 1);
   const tierScale = TIER_CPU_SCALE[cpu.tier] ?? 1.0;
   return single * coreBoost * tierScale;
+}
+
+// Measured review figure when there is one, else the estimate.
+export function cpuGamingScore(
+  cpu: CpuOption,
+  measured: number | null = measuredGamingIndex(cpu.modelName),
+  scale: number = GAMING_INDEX_TO_SCORE,
+): number {
+  return measured !== null && scale > 0 ? measured * scale : estimatedCpuGamingScore(cpu);
 }
 
 export function calculateBottleneck(
