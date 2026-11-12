@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { getAgenticTestResult } from "@/lib/agentic-coding-test";
 import { checkFit, estimateMemory, minVramGb } from "@/lib/ai-fit";
 import { formatGb, formatSpeed } from "@/lib/ai-format";
 import { getGpus } from "@/lib/hardware-queries";
 import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmModel } from "@/lib/llm-models";
 import { cn } from "@/lib/utils";
 import { ShopLink } from "@/components/monetization/ShopLink";
+import { AgenticCodingTestBadge } from "@/components/local-ai/AgenticCodingTest";
 import type { LlmModel } from "@/types/local-ai";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +84,7 @@ export default async function LocalAiModelPage({ params }: Props) {
   const columns = contextColumns(model);
   const otherModels = LLM_MODELS.filter((m) => m.slug !== model.slug);
 
+  const agenticTest = getAgenticTestResult(model.slug);
   const facts: [string, string][] = [
     [
       "Parameters",
@@ -222,6 +225,8 @@ export default async function LocalAiModelPage({ params }: Props) {
               View on Hugging Face <ExternalLink className="h-3 w-3" />
             </a>
           </div>
+
+          {agenticTest && <AgenticCodingTestBadge result={agenticTest} />}
 
           <div className="rounded-lg border border-slate-200 bg-white p-5 flex flex-col gap-3">
             <p className="text-sm font-semibold text-slate-800">Check it with your hardware</p>
