@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatContext, formatGb, formatSpeed } from "./ai-format";
+import { formatContext, formatGb, formatMeasuredSpeed, formatSpeed } from "./ai-format";
 import { defaultQuant, getLlmModel } from "./llm-models";
 
 describe("formatting", () => {
@@ -19,5 +19,20 @@ describe("defaultQuant", () => {
   it("prefers Q4 and falls back to the native format", () => {
     expect(defaultQuant(getLlmModel("llama-3-1-8b")!)).toBe("Q4_K_M");
     expect(defaultQuant(getLlmModel("gpt-oss-20b")!)).toBe("MXFP4");
+  });
+});
+
+describe("formatMeasuredSpeed", () => {
+  it("rounds to whole tok/s from 10 up, without a tilde", () => {
+    expect(formatMeasuredSpeed(87.1)).toBe("87 tok/s");
+    expect(formatMeasuredSpeed(10)).toBe("10 tok/s");
+  });
+
+  it("keeps one decimal below 10", () => {
+    expect(formatMeasuredSpeed(4.34)).toBe("4.3 tok/s");
+  });
+
+  it("shows a dash when nothing was measured", () => {
+    expect(formatMeasuredSpeed(null)).toBe("—");
   });
 });

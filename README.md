@@ -13,8 +13,8 @@ Live at **[hardwarestack.dev](https://hardwarestack.dev)**
 | `/` | Bottleneck calculator (CPU, GPU, optional RAM, resolution) |
 | `/cpu/[slug]`, `/gpu/[slug]` | Specs and pairing table per component |
 | `/bottleneck/[cpu]-vs-[gpu]` | Static result for one CPU + GPU pair at 1080p, 1440p and 4K, with related pairs. Every scored pair resolves; only pairs at most one tier apart go in the sitemap (`lib/pair-pages.ts`) |
-| `/local-ai/coding-agents` | Agentic coding test results with VRAM estimates and the smallest GPU per model |
-| `/local-ai`, `/local-ai/[model]` | Local AI calculator and per-model VRAM pages, plus agentic coding test results from the ASO experiment (data in `lib/agentic-coding-test.ts`) |
+| `/local-ai/coding-agents` | Agentic coding test results with measured speed, VRAM estimates and the smallest GPU per model |
+| `/local-ai`, `/local-ai/[model]` | Local AI calculator and per-model VRAM pages, plus agentic coding test results from the ASO experiment (data in `lib/agentic-coding-test.ts`) and speeds measured on the test machine (`lib/measured-llm-speed.ts`) |
 
 ## Stack
 
@@ -74,6 +74,17 @@ Scraping lives entirely outside this app in `scripts/scraper/` — a standalone 
 The app itself never imports Playwright or runs scraping logic (would crash the Fly.io deployment).
 
 After the scraper runs, call `POST /api/revalidate` with the `x-revalidate-token` header to flush the Next.js cache.
+
+## Measuring local model speed
+
+`scripts/bench/ollama-speed.mjs` measures prompt and generation speed through any Ollama server's API (standalone, not part of the app):
+
+```bash
+node scripts/bench/ollama-speed.mjs --host http://<ollama-host>:11434 \
+  --models gpt-oss:20b,qwen3-coder:30b --contexts 8192,32768,65536 --runs 3 --out speed.json
+```
+
+Each model and context gets a warm-up, then `--runs` timed requests (median kept); every request starts differently so Ollama's prompt cache can't skip work. Copy the medians into `lib/measured-llm-speed.ts`; model pages then show them next to the calculator's estimate.
 
 ## Database scripts
 
