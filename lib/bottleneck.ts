@@ -5,7 +5,7 @@ import type {
   RamOption,
   Resolution,
 } from "@/types/hardware";
-import { GAMING_INDEX_TO_SCORE, measuredGamingIndex } from "./cpu-gaming-index";
+import { cpuGamingScore } from "./cpu-gaming-index";
 
 export const RESOLUTIONS: Resolution[] = ["1080p", "1440p", "4K"];
 
@@ -35,36 +35,6 @@ function ramUtilization(ram: RamOption): number {
   // Represents how saturated the RAM bus is relative to a reference system.
   // 80 % is the nominal "healthy" load; slow RAM pushes it to 100 %.
   return Math.round(Math.min(100, (RAM_REFERENCE_SCORE / effective) * 80));
-}
-
-// Tier multiplier accounts for architectural advantages (cache bandwidth,
-// prefetch efficiency, IPC headroom) that PassMark single-thread doesn't capture.
-// An ENTHUSIAST CPU sustains far more FPS in real games than its benchmark implies.
-const TIER_CPU_SCALE: Record<string, number> = {
-  ENTRY: 1.0,
-  MID: 1.1,
-  HIGH: 1.25,
-  ULTRA: 1.4,
-  ENTHUSIAST: 1.6,
-};
-
-// Estimated CPU gaming throughput: single-core speed × core-count boost × tier scale.
-// log2(cores+1) gives diminishing returns: 4c→2.3×, 8c→3.2×, 16c→4.1×, 24c→4.6×
-// Used only for CPUs without a measured figure in lib/cpu-gaming-index.ts.
-export function estimatedCpuGamingScore(cpu: CpuOption): number {
-  const single = cpu.singleCoreScore ?? 0;
-  const coreBoost = Math.log2((cpu.cores ?? 4) + 1);
-  const tierScale = TIER_CPU_SCALE[cpu.tier] ?? 1.0;
-  return single * coreBoost * tierScale;
-}
-
-// Measured review figure when there is one, else the estimate.
-export function cpuGamingScore(
-  cpu: CpuOption,
-  measured: number | null = measuredGamingIndex(cpu.modelName),
-  scale: number = GAMING_INDEX_TO_SCORE,
-): number {
-  return measured !== null && scale > 0 ? measured * scale : estimatedCpuGamingScore(cpu);
 }
 
 export function calculateBottleneck(

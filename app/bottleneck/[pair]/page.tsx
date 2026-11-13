@@ -9,6 +9,7 @@ import { toSlug } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { BottleneckBadge } from "@/components/detail/BottleneckBadge";
+import { CpuGamingSource } from "@/components/detail/CpuGamingSource";
 import { ShopLink } from "@/components/monetization/ShopLink";
 import { UpgradeCard } from "@/components/monetization/UpgradeCard";
 
@@ -117,7 +118,7 @@ export default async function PairPage({ params }: Props) {
             </table>
             <p className="px-4 py-2.5 border-t border-slate-100 text-[11px] text-slate-400">
               Imbalances under 10% count as balanced. Assumes fast dual-channel RAM; add your RAM kit in the
-              calculator for a tailored result.
+              calculator for a tailored result. <CpuGamingSource modelName={cpu.modelName} />
             </p>
           </div>
 
