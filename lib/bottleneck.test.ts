@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { calculateBottleneck } from "./bottleneck";
+import { cpuGamingScore } from "./cpu-gaming-index";
 import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 const cpu = (overrides: Partial<CpuOption> = {}): CpuOption => ({
@@ -43,9 +44,8 @@ const ram = (overrides: Partial<RamOption> = {}): RamOption => ({
 
 describe("calculateBottleneck", () => {
   it("returns Balanced when CPU and GPU are closely matched", () => {
-    // cpuGamingScore = 2000 * log2(9) * 1.1 ≈ 6968, effectiveGpu at 1080p = 7500
-    // gap ≈ 7.1% — within the 10% balanced threshold
-    const result = calculateBottleneck(cpu(), gpu(), "1080p");
+    // GPU 7% above the CPU score: within the 10% balanced threshold
+    const result = calculateBottleneck(cpu(), gpu({ rasterScore: cpuGamingScore(cpu()) * 1.07 }), "1080p");
     expect(result.bottleneckComponent).toBe("Balanced");
     expect(result.bottleneckPercentage).toBeLessThan(10);
   });
@@ -80,13 +80,11 @@ describe("calculateBottleneck", () => {
   });
 
   it("detects RAM bottleneck when single-channel slow RAM limits the CPU", () => {
-    // cpuGamingScore (HIGH, 2200, 8c) = 2200 * log2(9) * 1.25 ≈ 8716
-    // slowRam rf = 0.75 + 0.25 * (2133/7200) ≈ 0.824
-    // effectiveCpu = 8716 * 0.824 ≈ 7182
-    // rawCpu / rf = 8716 / 0.824 ≈ 10577
-    // GPU score must be between 7182 and 10577 for RAM bottleneck to trigger
-    const strongGpu = gpu({ rasterScore: 9000 });
+    // slowRam rf = 0.75 + 0.25 * (2133/7200) ≈ 0.824, so the effective CPU score is
+    // 0.824 × raw. A GPU at raw × 1.0 sits between effective and raw / rf: the CPU only
+    // falls short because of the RAM.
     const strongCpu = cpu({ tier: "HIGH", singleCoreScore: 2200, cores: 8 });
+    const strongGpu = gpu({ rasterScore: cpuGamingScore(strongCpu) });
     const slowRam = ram({ speedMhz: 2133, channels: 1 }); // worst case: single-channel DDR4-2133
     const result = calculateBottleneck(strongCpu, strongGpu, "1080p", slowRam);
     expect(result.bottleneckComponent).toBe("RAM");
@@ -101,13 +99,7 @@ describe("calculateBottleneck", () => {
   });
 
   it("bottleneckPercentage is 0 when scores are equal", () => {
-    // Construct a GPU score that exactly matches CPU gaming score
-    // cpuGamingScore = 2000 * log2(9) * 1.1 ≈ 6971
-    const result = calculateBottleneck(
-      cpu({ singleCoreScore: 2000, cores: 8, tier: "MID" }),
-      gpu({ rasterScore: 6971 }),
-      "1080p"
-    );
+    const result = calculateBottleneck(cpu(), gpu({ rasterScore: cpuGamingScore(cpu()) }), "1080p");
     expect(result.bottleneckPercentage).toBeLessThan(1);
     expect(result.bottleneckComponent).toBe("Balanced");
   });

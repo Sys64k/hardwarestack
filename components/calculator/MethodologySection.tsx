@@ -1,3 +1,11 @@
+import {
+  CPU_GAMING_SOURCES,
+  GAMING_INDEX_TO_SCORE,
+  MEASURED_CPU_COUNT,
+  TOMS_HARDWARE,
+} from "@/lib/cpu-gaming-index";
+import { SourceLink } from "@/components/detail/CpuGamingSource";
+
 export function MethodologySection() {
   return (
     <section className="mt-12 border-t border-slate-200 pt-10">
@@ -20,16 +28,16 @@ export function MethodologySection() {
             </h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
-            Raw PassMark single-thread score is scaled to approximate real gaming
-            throughput — single-thread speed matters most, but core count and
-            architectural efficiency add headroom.
+            Each CPU&apos;s 1080p gaming performance as a percentage of the fastest gaming CPU,
+            from published reviews tested with an {TOMS_HARDWARE.gpu}. {MEASURED_CPU_COUNT} CPUs are
+            measured; the rest are estimated from their single-thread score, with adjustments for
+            X3D cache and the older AM4 platform, fitted to the measured ones.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
-            score = singleCore × log₂(cores + 1) × tierScale
+            score = gamingIndex × {GAMING_INDEX_TO_SCORE}
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
-            Tier scale: Entry 1.0 → Mid 1.1 → High 1.25 → Ultra 1.4 →
-            Enthusiast 1.6
+            The multiplier puts the CPU index on the same scale as the GPU score.
           </p>
         </div>
 
@@ -104,7 +112,14 @@ export function MethodologySection() {
       </div>
 
       <p className="mt-6 text-xs text-slate-400 max-w-2xl">
-        Benchmark data is sourced from PassMark. Scores are normalized and
+        CPU gaming figures:{" "}
+        {CPU_GAMING_SOURCES.map((src, i) => (
+          <span key={src.url}>
+            {i > 0 && ", "}
+            <SourceLink source={src} />
+          </span>
+        ))}
+        . Single-thread and GPU scores are from PassMark. Scores are normalized and
         intended as a relative guide — real-world performance varies by game,
         driver version, and system configuration. Always cross-reference with
         reviews and benchmarks for your specific use case.
