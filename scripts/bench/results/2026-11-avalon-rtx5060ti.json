@@ -1,0 +1,468 @@
+{
+  "measuredAt": "2026-11-13T19:37:46.926Z",
+  "ollamaVersion": "0.40.11",
+  "machine": {
+    "gpu": "RTX 5060 Ti 16 GB",
+    "cpu": "AMD Ryzen 7 5700X",
+    "ram": "48 GB DDR4",
+    "note": "Desktop session running; ~2 GB of VRAM in use before each model loads."
+  },
+  "settings": {
+    "runs": 3,
+    "numPredict": 256,
+    "temperature": 0,
+    "promptChars": 12312
+  },
+  "results": [
+    {
+      "model": "qwen2.5-coder:14b",
+      "numCtx": 8192,
+      "loadSeconds": 2.7,
+      "memoryGb": 10.4,
+      "gpuShare": 1,
+      "promptTokens": 3342,
+      "promptTokensPerSecond": 1850.7,
+      "generationTokensPerSecond": 41.9,
+      "runs": [
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1857.7761718804286,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 41.8923288600181
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1850.6848419940438,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 41.889648593301416
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1849.8356347421495,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 41.872697512778124
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5-coder:14b",
+      "numCtx": 32768,
+      "loadSeconds": 3.7,
+      "memoryGb": 14.2,
+      "gpuShare": 0.92,
+      "promptTokens": 3342,
+      "promptTokensPerSecond": 1302.7,
+      "generationTokensPerSecond": 16.5,
+      "runs": [
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1302.6578585895124,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.533484924723236
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1302.663951679041,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.5099937055649
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1302.8645476989939,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.510845561678327
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5-coder:14b",
+      "numCtx": 65536,
+      "loadSeconds": 3.8,
+      "memoryGb": 14.2,
+      "gpuShare": 0.92,
+      "promptTokens": 3342,
+      "promptTokensPerSecond": 1302.9,
+      "generationTokensPerSecond": 16.5,
+      "runs": [
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1304.180871389503,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.5359219974722
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1302.7924275872338,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.559386422984947
+        },
+        {
+          "promptTokens": 3342,
+          "promptTokensPerSecond": 1302.874706102732,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 16.549115155660264
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:20b",
+      "numCtx": 8192,
+      "loadSeconds": 14.5,
+      "memoryGb": 12.7,
+      "gpuShare": 1,
+      "promptTokens": 3270,
+      "promptTokensPerSecond": 5335.8,
+      "generationTokensPerSecond": 93.3,
+      "runs": [
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5335.778762621482,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 93.32408355567674
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5344.6655497895645,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 93.33912327582404
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5332.9419247517,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 93.18002307661509
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:20b",
+      "numCtx": 32768,
+      "loadSeconds": 5.2,
+      "memoryGb": 13.7,
+      "gpuShare": 0.91,
+      "promptTokens": 3270,
+      "promptTokensPerSecond": 5183.1,
+      "generationTokensPerSecond": 87.1,
+      "runs": [
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5183.137525915688,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 86.65640329890095
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5180.9531052446455,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 87.32548973055653
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 5198.26533726727,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 87.0560862236124
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:20b",
+      "numCtx": 65536,
+      "loadSeconds": 5,
+      "memoryGb": 12.9,
+      "gpuShare": 0.9,
+      "promptTokens": 3270,
+      "promptTokensPerSecond": 3478.5,
+      "generationTokensPerSecond": 69.2,
+      "runs": [
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 3478.5494767814803,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 69.22383852674365
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 3484.6658716939633,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 69.26596208392058
+        },
+        {
+          "promptTokens": 3270,
+          "promptTokensPerSecond": 3468.8041006144135,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 69.23825478487728
+        }
+      ]
+    },
+    {
+      "model": "devstral:24b",
+      "numCtx": 8192,
+      "loadSeconds": 18.1,
+      "memoryGb": 16,
+      "gpuShare": 0.83,
+      "promptTokens": 4709,
+      "promptTokensPerSecond": 1138.8,
+      "generationTokensPerSecond": 10.4,
+      "runs": [
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 1138.698507988179,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 10.42896704259019
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 1138.838679870691,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 10.451608704671301
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 1139.0640181406197,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 10.442151703253627
+        }
+      ]
+    },
+    {
+      "model": "devstral:24b",
+      "numCtx": 32768,
+      "loadSeconds": 5.2,
+      "memoryGb": 20.1,
+      "gpuShare": 0.65,
+      "promptTokens": 4709,
+      "promptTokensPerSecond": 835.5,
+      "generationTokensPerSecond": 5.8,
+      "runs": [
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 836.3773157563256,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 5.813032396279323
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 835.4998547766763,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 5.8114354020704
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 834.5316397190983,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 5.815528879643813
+        }
+      ]
+    },
+    {
+      "model": "devstral:24b",
+      "numCtx": 65536,
+      "loadSeconds": 7.3,
+      "memoryGb": 25.6,
+      "gpuShare": 0.51,
+      "promptTokens": 4709,
+      "promptTokensPerSecond": 694.9,
+      "generationTokensPerSecond": 4.3,
+      "runs": [
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 694.9261096829225,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 4.340997199972021
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 694.9071378871961,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 4.352657181591906
+        },
+        {
+          "promptTokens": 4709,
+          "promptTokensPerSecond": 695.7018655269901,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 4.349452256147535
+        }
+      ]
+    },
+    {
+      "model": "qwen3-coder:30b",
+      "numCtx": 8192,
+      "loadSeconds": 19.5,
+      "memoryGb": 13.3,
+      "gpuShare": 0.98,
+      "promptTokens": 3321,
+      "promptTokensPerSecond": 804.2,
+      "generationTokensPerSecond": 55.7,
+      "runs": [
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 804.2402665980202,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 55.64051359671581
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 805.4234271277144,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 55.761235616705115
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 803.5584014680365,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 55.692623707784286
+        }
+      ]
+    },
+    {
+      "model": "qwen3-coder:30b",
+      "numCtx": 32768,
+      "loadSeconds": 4.2,
+      "memoryGb": 13.4,
+      "gpuShare": 0.98,
+      "promptTokens": 3321,
+      "promptTokensPerSecond": 641.5,
+      "generationTokensPerSecond": 45.9,
+      "runs": [
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 641.4982741745467,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 45.844820654524355
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 642.3364102040391,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 45.91570808658125
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 639.7565650177412,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 46.11520803903365
+        }
+      ]
+    },
+    {
+      "model": "qwen3-coder:30b",
+      "numCtx": 65536,
+      "loadSeconds": 4.2,
+      "memoryGb": 13.4,
+      "gpuShare": 0.98,
+      "promptTokens": 3321,
+      "promptTokensPerSecond": 497.7,
+      "generationTokensPerSecond": 37.1,
+      "runs": [
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 497.4231652709061,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 37.045344369758844
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 498.5131668420444,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 37.09598165024082
+        },
+        {
+          "promptTokens": 3321,
+          "promptTokensPerSecond": 497.66072485835554,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 37.13603422549754
+        }
+      ]
+    },
+    {
+      "model": "glm-4.7-flash:latest",
+      "numCtx": 8192,
+      "loadSeconds": 19.2,
+      "memoryGb": 13.4,
+      "gpuShare": 0.98,
+      "promptTokens": 3276,
+      "promptTokensPerSecond": 707.9,
+      "generationTokensPerSecond": 50.7,
+      "runs": [
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 707.9488435646996,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 50.74739414113405
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 708.1848310527374,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 50.74771605542761
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 706.4901993893907,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 50.7783971243559
+        }
+      ]
+    },
+    {
+      "model": "glm-4.7-flash:latest",
+      "numCtx": 32768,
+      "loadSeconds": 4.9,
+      "memoryGb": 13.5,
+      "gpuShare": 0.98,
+      "promptTokens": 3276,
+      "promptTokensPerSecond": 613.1,
+      "generationTokensPerSecond": 45.9,
+      "runs": [
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 614.2400185996977,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 45.93887760555085
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 613.0770686157875,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 45.904387258017984
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 612.5718593911978,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 45.91360816573521
+        }
+      ]
+    },
+    {
+      "model": "glm-4.7-flash:latest",
+      "numCtx": 65536,
+      "loadSeconds": 4.8,
+      "memoryGb": 13.5,
+      "gpuShare": 0.98,
+      "promptTokens": 3276,
+      "promptTokensPerSecond": 525.3,
+      "generationTokensPerSecond": 40.3,
+      "runs": [
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 525.5243452842532,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 40.30120744621481
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 525.2947206437458,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 40.28651898195337
+        },
+        {
+          "promptTokens": 3276,
+          "promptTokensPerSecond": 525.2144625722169,
+          "generatedTokens": 256,
+          "generationTokensPerSecond": 40.38696390841057
+        }
+      ]
+    }
+  ]
+}

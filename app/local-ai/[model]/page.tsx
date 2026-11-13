@@ -11,6 +11,8 @@ import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmM
 import { cn } from "@/lib/utils";
 import { ShopLink } from "@/components/monetization/ShopLink";
 import { AgenticCodingTestBadge } from "@/components/local-ai/AgenticCodingTest";
+import { MeasuredSpeedCard } from "@/components/local-ai/MeasuredSpeedCard";
+import { getMeasuredSpeed, speedRows } from "@/lib/measured-llm-speed";
 import type { LlmModel } from "@/types/local-ai";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +83,7 @@ export default async function LocalAiModelPage({ params }: Props) {
   const otherModels = LLM_MODELS.filter((m) => m.slug !== model.slug);
 
   const agenticTest = getAgenticTestResult(model.slug);
+  const measuredSpeed = getMeasuredSpeed(model.slug);
   const facts: [string, string][] = [
     [
       "Parameters",
@@ -129,6 +132,14 @@ export default async function LocalAiModelPage({ params }: Props) {
               )}
             </p>
           </div>
+
+          {measuredSpeed && (
+            <MeasuredSpeedCard
+              modelName={model.name}
+              ollamaTag={measuredSpeed.ollamaTag}
+              rows={speedRows(model, measuredSpeed)}
+            />
+          )}
 
           <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">

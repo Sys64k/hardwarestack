@@ -7,8 +7,17 @@ export function formatContext(tokens: number): string {
   return `${tokens / 1024}K`;
 }
 
+// Whole tok/s, or one decimal below 10.
+function roundSpeed(tokensPerSecond: number): string {
+  return tokensPerSecond < 10 ? tokensPerSecond.toFixed(1) : String(Math.round(tokensPerSecond));
+}
+
+// Measured, so no "~".
+export function formatMeasuredSpeed(tokensPerSecond: number | null): string {
+  return tokensPerSecond === null ? "—" : `${roundSpeed(tokensPerSecond)} tok/s`;
+}
+
 export function formatSpeed(tokensPerSecond: number | null): string {
-  if (tokensPerSecond === null) return "—";
-  return tokensPerSecond < 10 ? `~${tokensPerSecond.toFixed(1)} tok/s` : `~${Math.round(tokensPerSecond)} tok/s`;
+  return tokensPerSecond === null ? "—" : `~${roundSpeed(tokensPerSecond)} tok/s`;
 }
 

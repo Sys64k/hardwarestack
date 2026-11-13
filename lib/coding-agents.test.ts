@@ -49,6 +49,13 @@ describe("buildCodingAgentRows", () => {
     expect(row.smallestGpu?.id).toBe("16");
   });
 
+  it("adds the measured speed at the row's context, or null where none was measured", () => {
+    const at32k = buildCodingAgentRows(AGENTIC_TEST_RESULTS, GPUS).find((r) => r.model.slug === "gpt-oss-20b")!;
+    expect(at32k.measuredTokensPerSecond).toBe(87.1);
+    const at4k = buildCodingAgentRows(AGENTIC_TEST_RESULTS, GPUS, 4_096).find((r) => r.model.slug === "gpt-oss-20b")!;
+    expect(at4k.measuredTokensPerSecond).toBeNull();
+  });
+
   it("skips results without a calculator model or with an unknown slug", () => {
     const base = AGENTIC_TEST_RESULTS[0];
     const results: AgenticTestResult[] = [

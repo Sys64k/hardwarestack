@@ -1,5 +1,6 @@
 import { checkFit, estimateMemory, minVramGb } from "./ai-fit";
 import { defaultQuant, getLlmModel } from "./llm-models";
+import { measuredGenerationSpeed } from "./measured-llm-speed";
 import type { GpuOption } from "@/types/hardware";
 import type { AgenticTestResult, LlmModel, QuantId } from "@/types/local-ai";
 
@@ -17,6 +18,7 @@ export interface CodingAgentRow {
   memoryGib: number;
   minVramGb: number;
   smallestGpu: CodingAgentGpu | null; // smallest-VRAM GPU in the list that runs it entirely on the GPU
+  measuredTokensPerSecond: number | null; // generation speed on the test GPU at this context
 }
 
 export function smallestFittingGpu<T extends CodingAgentGpu>(
@@ -49,6 +51,7 @@ export function buildCodingAgentRows(
         memoryGib: estimateMemory(model, quant, contextTokens).totalGib,
         minVramGb: minVramGb(model, quant, contextTokens),
         smallestGpu: smallestFittingGpu(model, quant, contextTokens, gpus),
+        measuredTokensPerSecond: measuredGenerationSpeed(model.slug, contextTokens),
       },
     ];
   });

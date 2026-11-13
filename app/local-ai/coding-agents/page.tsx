@@ -15,8 +15,9 @@ import {
   describeTestsFirstGain,
   summarizeAgenticResults,
 } from "@/lib/agentic-coding-test";
-import { formatContext, formatGb } from "@/lib/ai-format";
+import { formatContext, formatGb, formatMeasuredSpeed } from "@/lib/ai-format";
 import { CODING_AGENT_CONTEXT_TOKENS, buildCodingAgentRows } from "@/lib/coding-agents";
+import { SPEED_TEST } from "@/lib/measured-llm-speed";
 import { getGpus } from "@/lib/hardware-queries";
 import { QUANT_LEVELS } from "@/lib/llm-models";
 
@@ -78,6 +79,7 @@ export default async function CodingAgentsPage() {
               <tr className="border-b border-slate-100 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 <th className="px-4 py-2">Model</th>
                 <th className="px-4 py-2">Levels passed</th>
+                <th className="px-4 py-2 text-right">Measured speed</th>
                 <th className="px-4 py-2 text-right">Memory</th>
                 <th className="px-4 py-2 text-right">VRAM to stay on GPU</th>
                 <th className="px-4 py-2">Smallest GPU that fits</th>
@@ -97,6 +99,9 @@ export default async function CodingAgentsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <AgenticScore result={row.result} />
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-700 whitespace-nowrap">
+                    {formatMeasuredSpeed(row.measuredTokensPerSecond)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-700 whitespace-nowrap">
                     {formatGb(row.memoryGib)} GB
@@ -121,8 +126,9 @@ export default async function CodingAgentsPage() {
           </table>
         </div>
         <p className="px-4 py-2.5 border-t border-slate-100 text-[11px] text-slate-400">
-          Memory and VRAM are this site&apos;s estimates at {CONTEXT_LABEL} context, the context the test started with.
-          They weren&apos;t measured in the test. {AGENTIC_TEST_CPU_NOTE}
+          Measured speed is how fast each model writes on the test machine at {CONTEXT_LABEL} context (median of{" "}
+          {SPEED_TEST.runs} runs; per-context results on each model&apos;s page). Memory and VRAM are this site&apos;s estimates at{" "}
+          {CONTEXT_LABEL} context, the context the test started with. {AGENTIC_TEST_CPU_NOTE}
         </p>
       </div>
 
