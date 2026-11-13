@@ -64,4 +64,18 @@ describe("speedRows", () => {
     expect(rows.map((r) => r.contextTokens)).toEqual(measured.points.map((p) => p.contextTokens));
     for (const r of rows) expect(r.estimatedTokensPerSecond).toBeGreaterThan(0);
   });
+
+  // The estimator's constants are fitted to these measurements (lib/ai-fit.ts). This keeps
+  // a later change to the estimator, or a new measurement, from drifting far from reality.
+  const TOLERANCE = 0.25;
+  it(`keeps every calculator estimate within ${TOLERANCE * 100}% of the measured speed`, () => {
+    for (const m of MEASURED_SPEEDS) {
+      for (const r of speedRows(getLlmModel(m.calculatorSlug)!, m)) {
+        const ratio = r.estimatedTokensPerSecond! / r.generationTokensPerSecond;
+        const label = `${m.ollamaTag} @ ${r.contextTokens}`;
+        expect(ratio, label).toBeGreaterThan(1 - TOLERANCE);
+        expect(ratio, label).toBeLessThan(1 + TOLERANCE);
+      }
+    }
+  });
 });

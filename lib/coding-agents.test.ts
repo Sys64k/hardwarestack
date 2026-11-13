@@ -42,11 +42,12 @@ describe("buildCodingAgentRows", () => {
     expect(qwen3Coder.memoryGib).toBeGreaterThan(16); // matches the test: it didn't fit on a 16 GB GPU
   });
 
-  it("estimates gpt-oss 20B within a 16 GB GPU at 32K", () => {
+  it("estimates gpt-oss 20B just over a 16 GB GPU at 32K", () => {
+    // Matches the test machine: at 32K Ollama kept ~91% of it on the 16 GB card.
     const row = buildCodingAgentRows(AGENTIC_TEST_RESULTS, GPUS).find((r) => r.model.slug === "gpt-oss-20b")!;
     expect(row.quant).toBe("MXFP4");
-    expect(row.minVramGb).toBeLessThanOrEqual(16);
-    expect(row.smallestGpu?.id).toBe("16");
+    expect(row.minVramGb).toBe(17);
+    expect(row.smallestGpu?.id).toBe("24b");
   });
 
   it("adds the measured speed at the row's context, or null where none was measured", () => {

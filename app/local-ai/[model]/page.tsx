@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getAgenticTestResult } from "@/lib/agentic-coding-test";
-import { checkFit, estimateMemory, minVramGb } from "@/lib/ai-fit";
+import { DESKTOP_VRAM_GIB, checkFit, estimateMemory, minVramGb } from "@/lib/ai-fit";
 import { formatContext, formatGb, formatSpeed } from "@/lib/ai-format";
 import { getGpus } from "@/lib/hardware-queries";
 import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmModel } from "@/lib/llm-models";
@@ -177,8 +177,8 @@ export default async function LocalAiModelPage({ params }: Props) {
               </table>
             </div>
             <p className="px-4 py-2.5 border-t border-slate-100 text-[11px] text-slate-400">
-              Total memory: model weights, context (KV cache) and about 1 GB of runtime overhead. To run entirely on the
-              GPU, VRAM must be about 5% larger than this.
+              Total memory: model weights, context (KV cache) and runtime overhead. To run entirely on a GPU that also
+              drives your screen, VRAM must be about {DESKTOP_VRAM_GIB} GB larger than this.
             </p>
           </div>
 
