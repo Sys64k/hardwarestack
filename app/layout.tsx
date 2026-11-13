@@ -103,19 +103,9 @@ export default function RootLayout({
                   juha.vaisanen@gmail.com
                 </a>
               </span>
-              <div className="flex items-center gap-4">
-                <a
-                  href="https://buymeacoffee.com/vaisajuh"
-                  target="_blank"
-                  rel="noopener"
-                  className="underline hover:text-slate-900"
-                >
-                  ☕ Buy me a coffee
-                </a>
-                <Link href="/terms" className="underline hover:text-slate-900">
-                  Terms of Use
-                </Link>
-              </div>
+              <Link href="/terms" className="underline hover:text-slate-900">
+                Terms of Use
+              </Link>
             </div>
           </div>
         </footer>
