@@ -86,6 +86,8 @@ node scripts/bench/ollama-speed.mjs --host http://<ollama-host>:11434 \
 
 Each model and context gets a warm-up, then `--runs` timed requests (median kept); every request starts differently so Ollama's prompt cache can't skip work. Copy the medians into `lib/measured-llm-speed.ts`; model pages then show them next to the calculator's estimate.
 
+The estimator's constants in `lib/ai-fit.ts` (desktop VRAM, runtime overhead, bandwidth efficiencies, per-token cost) are fitted to these measurements, and `lib/measured-llm-speed.test.ts` fails if any estimate drifts more than 25% from a measured speed. After adding measurements, refit the constants if that test fails.
+
 ## Database scripts
 
 ```bash

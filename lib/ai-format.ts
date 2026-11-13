@@ -3,6 +3,11 @@ export function formatGb(gib: number): string {
   return Math.round(gib * 10) < 100 ? gib.toFixed(1) : Math.round(gib).toString();
 }
 
+// 0.75 → "75%"
+export function formatPercent(fraction: number): string {
+  return `${Math.round(fraction * 100)}%`;
+}
+
 export function formatContext(tokens: number): string {
   return `${tokens / 1024}K`;
 }

@@ -1,3 +1,19 @@
+import {
+  DESKTOP_VRAM_GIB,
+  GPU_BANDWIDTH_EFFICIENCY,
+  MOE_GPU_BANDWIDTH_EFFICIENCY,
+  PER_TOKEN_OVERHEAD_SECONDS,
+  RAM_BANDWIDTH_EFFICIENCY,
+  RUNTIME_OVERHEAD_BASE_GIB,
+  RUNTIME_OVERHEAD_WEIGHT_SHARE,
+  USABLE_RAM_FRACTION,
+} from "@/lib/ai-fit";
+import { formatPercent } from "@/lib/ai-format";
+import { SPEED_TEST } from "@/lib/measured-llm-speed";
+
+const USABLE_RAM = formatPercent(USABLE_RAM_FRACTION);
+const PER_TOKEN_MS = PER_TOKEN_OVERHEAD_SECONDS * 1000;
+
 interface Step {
   title: string;
   body: string;
@@ -16,19 +32,22 @@ const STEPS: Step[] = [
     title: "Context memory (KV cache)",
     body: "The model keeps keys and values for every token in the conversation. The size per token comes from each model's published architecture; sliding-window layers only keep their window.",
     formula: ["kv = 2 × layers × kvHeads × headDim × 2 bytes × tokens"],
-    note: "Plus about 1 GB of runtime overhead for the GPU context and compute buffers.",
+    note: `Plus runtime overhead for the GPU context and compute buffers: ${RUNTIME_OVERHEAD_BASE_GIB} GB + ${formatPercent(RUNTIME_OVERHEAD_WEIGHT_SHARE)} of the weights.`,
   },
   {
     title: "Does it fit?",
-    body: "About 95% of VRAM is usable after the desktop and driver take their share. Whatever doesn't fit can spill into system RAM, of which we assume 75% is free for the model.",
-    formula: ["total ≤ 0.95 × VRAM → On GPU", "spill ≤ 0.75 × RAM → GPU + RAM"],
+    body: `The desktop and driver hold about ${DESKTOP_VRAM_GIB} GB of VRAM before a model loads, as measured on our test machine; a GPU that doesn't drive a screen has that much more. Whatever doesn't fit can spill into system RAM, of which we assume ${USABLE_RAM} is free for the model.`,
+    formula: [`total ≤ VRAM − ${DESKTOP_VRAM_GIB} GB → On GPU`, `spill ≤ ${USABLE_RAM} of RAM → GPU + RAM`],
     note: "Anything larger won't run without more hardware.",
   },
   {
     title: "Speed estimate",
-    body: "Generating a token means reading every active weight once, so speed is set by memory bandwidth. Mixture-of-experts models only read their active parameters, which is why they're fast for their size.",
-    formula: ["seconds = gpuPart / (0.7 × gpuBW)", "        + ramPart / (0.6 × ramBW) + 1.5 ms"],
-    note: "Single-user generation speed. Prompt processing is usually much faster.",
+    body: `Generating a token means reading every active weight once, so speed is set by memory bandwidth. Mixture-of-experts models only read their active parameters, which is why they're fast for their size, though they use the GPU's bandwidth less efficiently (${MOE_GPU_BANDWIDTH_EFFICIENCY} instead of ${GPU_BANDWIDTH_EFFICIENCY}).`,
+    formula: [
+      `seconds = gpuPart / (${GPU_BANDWIDTH_EFFICIENCY} × gpuBW)`,
+      `        + ramPart / (${RAM_BANDWIDTH_EFFICIENCY} × ramBW) + ${PER_TOKEN_MS} ms`,
+    ],
+    note: `Single-user generation speed. The constants are fitted to speeds we measured on an ${SPEED_TEST.gpu}; prompt processing is usually much faster.`,
   },
 ];
 

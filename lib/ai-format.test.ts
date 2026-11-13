@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { formatContext, formatGb, formatMeasuredSpeed, formatSpeed } from "./ai-format";
+import { formatContext, formatGb, formatMeasuredSpeed, formatPercent, formatSpeed } from "./ai-format";
 import { defaultQuant, getLlmModel } from "./llm-models";
+
+describe("formatPercent", () => {
+  it("rounds a fraction to a whole percent", () => {
+    expect(formatPercent(0.75)).toBe("75%");
+    expect(formatPercent(0.054)).toBe("5%");
+    expect(formatPercent(1)).toBe("100%");
+  });
+});
 
 describe("formatting", () => {
   it("shows one decimal below 10 and whole numbers above", () => {
