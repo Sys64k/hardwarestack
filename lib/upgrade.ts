@@ -1,5 +1,6 @@
 import { calculateBottleneck } from "./bottleneck";
 import { cpuGamingScore } from "./cpu-gaming-index";
+import { gpuGamingScore } from "./gpu-gaming-index";
 import { isOlderPlatform, isRamCompatible, ramTypesForSocket } from "./platform";
 import type {
   BottleneckComponent,
@@ -105,10 +106,13 @@ export function planGpuUpgrade(
   gpus: GpuOption[],
   resolves: (candidate: GpuOption) => boolean,
 ): UpgradePlan | null {
-  const current = gpu.rasterScore ?? 0;
+  const current = gpuGamingScore(gpu);
   const faster = gpus
-    .filter((g) => g.id !== gpu.id && (g.rasterScore ?? 0) > current)
-    .sort((a, b) => (a.rasterScore ?? 0) - (b.rasterScore ?? 0));
+    .filter((g) => g.id !== gpu.id)
+    .map((g) => ({ g, score: gpuGamingScore(g) }))
+    .filter(({ score }) => score > current)
+    .sort((a, b) => a.score - b.score)
+    .map(({ g }) => g);
   const picked = pick(faster, resolves);
   return picked ? { kind: "GPU", gpu: picked.item, resolves: picked.resolves } : null;
 }

@@ -6,6 +6,7 @@ import type {
   Resolution,
 } from "@/types/hardware";
 import { cpuGamingScore } from "./cpu-gaming-index";
+import { gpuGamingScore } from "./gpu-gaming-index";
 
 export const RESOLUTIONS: Resolution[] = ["1080p", "1440p", "4K"];
 
@@ -44,7 +45,7 @@ export function calculateBottleneck(
   ram?: RamOption
 ): BottleneckResult {
   const rawCpuScore = cpuGamingScore(cpu);
-  const gpuBaseScore = gpu.rasterScore ?? 0;
+  const gpuBaseScore = gpuGamingScore(gpu);
 
   const rf = ram ? ramFactor(ram) : 1.0;
   const ramUtil = ram ? ramUtilization(ram) : 80;

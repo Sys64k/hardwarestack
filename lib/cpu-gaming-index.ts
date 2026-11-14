@@ -146,10 +146,11 @@ export function gamingIndex(cpu: CpuOption): number | null {
   return measuredGamingIndex(cpu.modelName) ?? estimatedGamingIndex(cpu);
 }
 
-// Converts the gaming index into the units of `Gpu.rasterScore`. Set to the median ratio
-// of the old single-core × core-count score to the new index across production CPUs, so
-// the overall CPU-vs-GPU balance stays where it was while the order between CPUs follows
-// measured figures.
+// Converts the gaming index onto the score scale shared with the GPU score
+// (GPU_GAMING_INDEX_TO_SCORE in lib/gpu-gaming-index.ts; the scale was originally
+// PassMark-derived). Set to the median ratio of the old single-core × core-count score to
+// the new index across production CPUs, so the overall CPU-vs-GPU balance stays where it
+// was while the order between CPUs follows measured figures.
 export const GAMING_INDEX_TO_SCORE = 150;
 
 // The CPU score the bottleneck model and upgrade ranking use. 0 when the CPU has neither
