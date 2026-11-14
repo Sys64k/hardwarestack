@@ -109,6 +109,6 @@ fly secrets set DIRECT_URL="..."
 fly secrets set REVALIDATE_TOKEN="..."
 ```
 
-Each push to `main` deploys through `.github/workflows/deploy.yml`. It runs lint, typecheck and tests, then deploys. Deploys run one at a time in push order, so back-to-back merges can't leave the older commit live. After each deploy, a smoke check loads the home page, a pair page, `/local-ai` and the sitemap, and fails the run if any of them is broken.
+Each push to `main` deploys through `.github/workflows/deploy.yml`. It runs lint, typecheck and tests, then deploys. Deploys run one at a time in push order, so back-to-back merges can't leave the older commit live. After each deploy, a smoke check loads the home page, a pair page, `/local-ai` and the sitemap from the Fly origin (`hardwarestack.fly.dev`, since Cloudflare blocks GitHub's runners), and fails the run if any of them is broken.
 
 The `Dockerfile` runs `npx prisma generate` before `npm run build` so the generated Prisma client is bundled in the standalone output. `next.config.ts` is set to `output: "standalone"` — do not remove this.

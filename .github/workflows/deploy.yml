@@ -54,12 +54,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      # Checks the Fly origin, not hardwarestack.dev: Cloudflare answers GitHub's runners
+      # with 403 as bot traffic, and the origin is what was just deployed (no edge cache).
       # Machines auto-stop when idle, so the first request may hit a cold start: retry.
       - name: Smoke check
         run: |
           set -euo pipefail
           check() {
-            local url="https://hardwarestack.dev$1" expect="$2"
+            local url="https://hardwarestack.fly.dev$1" expect="$2"
             local body
             body=$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors --max-time 30 "$url")
             if ! grep -qF "$expect" <<<"$body"; then
