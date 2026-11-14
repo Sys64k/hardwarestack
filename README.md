@@ -12,9 +12,11 @@ Live at **[hardwarestack.dev](https://hardwarestack.dev)**
 |---|---|
 | `/` | Bottleneck calculator (CPU, GPU, optional RAM, resolution) |
 | `/cpu/[slug]`, `/gpu/[slug]` | Specs and pairing table per component |
-| `/bottleneck/[cpu]-vs-[gpu]` | Static result for one CPU + GPU pair at 1080p, 1440p and 4K, with related pairs. Every scored pair resolves; only pairs at most one tier apart go in the sitemap (`lib/pair-pages.ts`) |
+| `/bottleneck/[cpu]-vs-[gpu]` | Static result for one CPU + GPU pair at 1080p, 1440p and 4K, with related pairs. Every scored pair resolves; the sitemap and related links list a subset (`isSitemapPair` in `lib/pair-pages.ts`) |
 | `/local-ai/coding-agents` | Agentic coding test results with measured speed, VRAM estimates and the smallest GPU per model |
 | `/local-ai`, `/local-ai/[model]` | Local AI calculator and per-model VRAM pages, plus agentic coding test results from the ASO experiment (data in `lib/agentic-coding-test.ts`) and speeds measured on the test machine (`lib/measured-llm-speed.ts`) |
+
+The sitemap lists the pair pages where both parts have a review figure and are at most one tier apart (about 1,150 of 6,800). The other pair pages still load (the calculator links to them) and are not noindexed; they're just not advertised to crawlers.
 
 ## Stack
 

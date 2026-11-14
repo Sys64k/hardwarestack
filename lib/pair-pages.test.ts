@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bestResolution,
   hasScores,
+  hasReviewFigures,
   isSitemapPair,
   pairHref,
   pairPath,
@@ -126,6 +127,22 @@ describe("hasScores / isSitemapPair", () => {
 
   it("excludes pairs missing a score even when tiers match", () => {
     expect(isSitemapPair(cpu({ singleCoreScore: null }), gpu({ tier: "MID" }))).toBe(false);
+  });
+
+  it("excludes pairs without review figures even when tiers match", () => {
+    expect(isSitemapPair(cpu(), gpu({ modelName: "Unreviewed GPU" }))).toBe(false);
+  });
+});
+
+describe("hasReviewFigures", () => {
+  it("needs a review figure on both sides", () => {
+    expect(hasReviewFigures(cpu(), gpu())).toBe(true);
+    expect(hasReviewFigures(cpu({ modelName: "Unreviewed CPU" }), gpu())).toBe(false);
+    expect(hasReviewFigures(cpu(), gpu({ modelName: "Unreviewed GPU" }))).toBe(false);
+  });
+
+  it("counts a figure reached through an alias", () => {
+    expect(hasReviewFigures(cpu(), gpu({ modelName: "NVIDIA GeForce RTX 5090 D" }))).toBe(true);
   });
 });
 
