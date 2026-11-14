@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
+import { ShopClickTracker } from "@/components/monetization/ShopClickTracker";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -110,6 +111,7 @@ export default function RootLayout({
           </div>
         </footer>
 
+        <ShopClickTracker />
         {cfBeaconToken && (
           <Script
             src="https://static.cloudflareinsights.com/beacon.min.js"

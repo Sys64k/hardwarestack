@@ -62,7 +62,8 @@ wait_for_port() {
 }
 
 echo "==> Dumping local database..."
-pg_dump --no-owner --no-acl "$LOCAL_URL" > "$DUMP_FILE"
+# Click counts are collected in production; never overwrite them with local test clicks.
+pg_dump --no-owner --no-acl --exclude-table-data='"ShopClick"' "$LOCAL_URL" > "$DUMP_FILE"
 echo "    $(du -sh "$DUMP_FILE" | cut -f1) written to $DUMP_FILE"
 
 echo "==> Starting Fly proxy on port ${PROXY_PORT}..."

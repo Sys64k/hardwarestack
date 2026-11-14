@@ -91,3 +91,14 @@ model RetailLink {
   @@index([gpuId])
   @@index([ramId])
 }
+
+// Shop link clicks, counted per day. No visitor data: see lib/shop-clicks.ts.
+model ShopClick {
+  day      DateTime @db.Date
+  retailer String // lib/shop-clicks.ts SHOP_RETAILERS
+  part     String // a Cpu, Gpu or Ram modelName
+  page     String // lib/shop-clicks.ts PAGE_KINDS
+  count    Int      @default(0)
+
+  @@id([day, retailer, part, page])
+}

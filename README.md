@@ -96,9 +96,16 @@ The estimator's constants in `lib/ai-fit.ts` (desktop VRAM, runtime overhead, ba
 scripts/db-push-to-prod.sh   # dump local DB and restore to production (Neon)
 scripts/db-reset-prod.sh     # truncate all production tables
 scripts/prod-restart.sh      # restart Fly.io machines
+scripts/shop-clicks-prod.sh  # read-only report of shop link clicks (default: last 30 days)
 ```
 
 All scripts auto-load `.env.local`. Run them with `bash scripts/<name>.sh`.
+
+`db-push-to-prod.sh` copies everything except `ShopClick` rows. Click counts exist only in production and are never overwritten.
+
+## Shop click counts
+
+Cloudflare Web Analytics can't count clicks on the shop links, so the site counts them itself. `ShopClickTracker`, mounted in the root layout, listens for clicks on Amazon, Google Shopping and PCPartPicker search links. For each one it sends a beacon to `POST /api/shop-click`. The route validates the beacon with Zod and keeps it only if the search names a CPU, GPU or RAM in the catalogue. It then adds one to a per-day counter in `ShopClick`, keyed by day, retailer, part and page type. Nothing about the visitor is stored: no IP, user agent, cookie or URL. The logic is in `lib/shop-clicks.ts` and `lib/shop-click-schema.ts`.
 
 ## Deployment
 
