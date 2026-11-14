@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateBottleneck } from "./bottleneck";
 import { cpuGamingScore } from "./cpu-gaming-index";
+import { gpuGamingScore } from "./gpu-gaming-index";
 import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 const cpu = (overrides: Partial<CpuOption> = {}): CpuOption => ({
@@ -29,6 +30,19 @@ const gpu = (overrides: Partial<GpuOption> = {}): GpuOption => ({
   ...overrides,
 });
 
+// An unreviewed GPU whose estimated gaming score equals `score` (bisection on rasterScore,
+// which the estimate rises with).
+const gpuScoring = (score: number): GpuOption => {
+  let lo = 1;
+  let hi = 100_000;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (gpuGamingScore(gpu({ rasterScore: mid })) < score) lo = mid;
+    else hi = mid;
+  }
+  return gpu({ rasterScore: (lo + hi) / 2 });
+};
+
 const ram = (overrides: Partial<RamOption> = {}): RamOption => ({
   id: "ram-1",
   modelName: "Test RAM",
@@ -45,7 +59,7 @@ const ram = (overrides: Partial<RamOption> = {}): RamOption => ({
 describe("calculateBottleneck", () => {
   it("returns Balanced when CPU and GPU are closely matched", () => {
     // GPU 7% above the CPU score: within the 10% balanced threshold
-    const result = calculateBottleneck(cpu(), gpu({ rasterScore: cpuGamingScore(cpu()) * 1.07 }), "1080p");
+    const result = calculateBottleneck(cpu(), gpuScoring(cpuGamingScore(cpu()) * 1.07), "1080p");
     expect(result.bottleneckComponent).toBe("Balanced");
     expect(result.bottleneckPercentage).toBeLessThan(10);
   });
@@ -84,7 +98,7 @@ describe("calculateBottleneck", () => {
     // 0.824 × raw. A GPU at raw × 1.0 sits between effective and raw / rf: the CPU only
     // falls short because of the RAM.
     const strongCpu = cpu({ tier: "HIGH", singleCoreScore: 2200, cores: 8 });
-    const strongGpu = gpu({ rasterScore: cpuGamingScore(strongCpu) });
+    const strongGpu = gpuScoring(cpuGamingScore(strongCpu));
     const slowRam = ram({ speedMhz: 2133, channels: 1 }); // worst case: single-channel DDR4-2133
     const result = calculateBottleneck(strongCpu, strongGpu, "1080p", slowRam);
     expect(result.bottleneckComponent).toBe("RAM");
@@ -98,8 +112,15 @@ describe("calculateBottleneck", () => {
     expect(withRam.cpuUtilization).toBe(withoutRam.cpuUtilization);
   });
 
+  it("uses the measured figure for a reviewed GPU, whatever its raster score", () => {
+    const reviewed = gpu({ modelName: "NVIDIA GeForce RTX 5090", rasterScore: 1 });
+    const matched = calculateBottleneck(cpu(), reviewed, "1080p");
+    const sameScore = calculateBottleneck(cpu(), gpuScoring(gpuGamingScore(reviewed)), "1080p");
+    expect(matched.bottleneckPercentage).toBeCloseTo(sameScore.bottleneckPercentage, 5);
+  });
+
   it("bottleneckPercentage is 0 when scores are equal", () => {
-    const result = calculateBottleneck(cpu(), gpu({ rasterScore: cpuGamingScore(cpu()) }), "1080p");
+    const result = calculateBottleneck(cpu(), gpuScoring(cpuGamingScore(cpu())), "1080p");
     expect(result.bottleneckPercentage).toBeLessThan(1);
     expect(result.bottleneckComponent).toBe("Balanced");
   });

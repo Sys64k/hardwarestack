@@ -4,7 +4,8 @@ import {
   MEASURED_CPU_COUNT,
   TOMS_HARDWARE,
 } from "@/lib/cpu-gaming-index";
-import { SourceLink } from "@/components/detail/CpuGamingSource";
+import { GPU_GAMING_INDEX_TO_SCORE, MEASURED_GPU_COUNT, TOMS_GPU_HIERARCHY } from "@/lib/gpu-gaming-index";
+import { SourceLink } from "@/components/detail/SourceLink";
 
 export function MethodologySection() {
   return (
@@ -51,12 +52,16 @@ export function MethodologySection() {
             </h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
-            The GPU&apos;s PassMark raster score is divided by a resolution
-            multiplier — higher resolutions demand proportionally more from the
-            GPU, shifting the bottleneck toward the graphics card.
+            Each GPU&apos;s {TOMS_GPU_HIERARCHY.resolution} gaming performance as a percentage of the
+            fastest gaming GPU, from a published review. {MEASURED_GPU_COUNT} GPUs are measured; the rest
+            are estimated from their PassMark score, fitted to the measured ones. The score is divided
+            by a resolution multiplier: higher resolutions demand proportionally more from the GPU,
+            shifting the bottleneck toward the graphics card.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
-            effectiveGPU = rasterScore / resolutionRatio
+            gpuScore = gamingIndex × {GPU_GAMING_INDEX_TO_SCORE}
+            <br />
+            effectiveGPU = gpuScore / resolutionRatio
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
             Resolution ratios: 1080p = 1.0 · 1440p = 1.78 · 4K = 4.0
@@ -119,7 +124,8 @@ export function MethodologySection() {
             <SourceLink source={src} />
           </span>
         ))}
-        . Single-thread and GPU scores are from PassMark. Scores are normalized and
+        . GPU gaming figures: <SourceLink source={TOMS_GPU_HIERARCHY} />. Single-thread scores, and
+        the PassMark scores behind the estimates, are from PassMark. Scores are normalized and
         intended as a relative guide — real-world performance varies by game,
         driver version, and system configuration. Always cross-reference with
         reviews and benchmarks for your specific use case.

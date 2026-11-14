@@ -1,4 +1,5 @@
 import { RESOLUTIONS, calculateBottleneck } from "./bottleneck";
+import { gpuGamingScore } from "./gpu-gaming-index";
 import { toSlug } from "./slug";
 import type {
   BottleneckResult,
@@ -155,11 +156,13 @@ export function relatedGpus(
   gpus: GpuOption[],
   limit = 6
 ): GpuOption[] {
-  const target = gpu.rasterScore ?? 0;
+  const target = gpuGamingScore(gpu);
   return gpus
     .filter((g) => g.id !== gpu.id && isSitemapPair(cpu, g))
-    .sort((a, b) => Math.abs((a.rasterScore ?? 0) - target) - Math.abs((b.rasterScore ?? 0) - target))
-    .slice(0, limit);
+    .map((g) => ({ g, distance: Math.abs(gpuGamingScore(g) - target) }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit)
+    .map(({ g }) => g);
 }
 
 export function relatedCpus(

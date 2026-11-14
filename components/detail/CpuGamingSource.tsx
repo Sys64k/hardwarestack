@@ -1,13 +1,5 @@
-import { gamingIndexSource, type GamingIndexSource } from "@/lib/cpu-gaming-index";
-
-// Link to a review the CPU gaming figures come from.
-export function SourceLink({ source }: { source: GamingIndexSource }) {
-  return (
-    <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-600">
-      {source.publisher}
-    </a>
-  );
-}
+import { gamingIndexSource } from "@/lib/cpu-gaming-index";
+import { SourceLink } from "./SourceLink";
 
 // Where the CPU's gaming figure comes from: a credited review, or an estimate.
 export function CpuGamingSource({ modelName }: { modelName: string }) {
