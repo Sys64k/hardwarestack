@@ -1,5 +1,6 @@
 import { RESOLUTIONS, calculateBottleneck } from "./bottleneck";
-import { gpuGamingScore } from "./gpu-gaming-index";
+import { measuredGamingIndex } from "./cpu-gaming-index";
+import { gpuGamingScore, measuredGpuIndex } from "./gpu-gaming-index";
 import { toSlug } from "./slug";
 import type {
   BottleneckResult,
@@ -17,8 +18,9 @@ const TIER_RANK: Record<TierType, number> = {
   ENTHUSIAST: 4,
 };
 
-// Pairs further apart than this are still reachable, but stay out of the
-// sitemap and "related" links so crawlers spend their budget on builds people buy.
+// Every scored pair has a page, but only some go in the sitemap and "related" links,
+// so crawlers spend their budget on the best pages (see isSitemapPair).
+// Pairs further apart in tier than this are builds few people buy.
 const MAX_SITEMAP_TIER_GAP = 1;
 
 const SLUG_SEPARATOR = "-vs-";
@@ -59,9 +61,18 @@ export function hasScores(cpu: CpuOption, gpu: GpuOption): boolean {
   return cpu.singleCoreScore != null && gpu.rasterScore != null;
 }
 
+// Both parts have a review figure (directly or through a same-chip alias), so the
+// verdict rests on published benchmarks rather than on an estimate from PassMark.
+// Unlike hasScores, which only checks the database's PassMark-derived scores.
+export function hasReviewFigures(cpu: CpuOption, gpu: GpuOption): boolean {
+  return measuredGamingIndex(cpu.modelName) !== null && measuredGpuIndex(gpu.modelName) !== null;
+}
+
+// In the sitemap: scored, review figures on both sides, and at most one tier apart.
 export function isSitemapPair(cpu: CpuOption, gpu: GpuOption): boolean {
   return (
     hasScores(cpu, gpu) &&
+    hasReviewFigures(cpu, gpu) &&
     Math.abs(TIER_RANK[cpu.tier] - TIER_RANK[gpu.tier]) <= MAX_SITEMAP_TIER_GAP
   );
 }
