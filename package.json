@@ -52,5 +52,13 @@
     "tsx": "^4.22.3",
     "typescript": "^5",
     "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.8"
+    },
+    "@ts-morph/common": {
+      "minimatch": "^11.0.8"
+    }
   }
 }
