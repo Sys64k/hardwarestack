@@ -1,4 +1,4 @@
-function pcPartPickerQuery(name: string): string {
+export function pcPartPickerQuery(name: string): string {
   return name
     .replace("Intel Core ", "")         // "i9-14900K"
     .replace(/AMD Ryzen \d+ /, "")      // "5950X", "7950X"

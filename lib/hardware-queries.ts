@@ -49,3 +49,9 @@ export const getRams = unstable_cache(
   ["rams"],
   { tags: ["hardware"], revalidate: 86400 }
 );
+
+// Every CPU, GPU and RAM model name in the catalogue (from the cached queries above).
+export async function getPartNames(): Promise<string[]> {
+  const [cpus, gpus, rams] = await Promise.all([getCpus(), getGpus(), getRams()]);
+  return [...cpus, ...gpus, ...rams].map((p) => p.modelName);
+}
