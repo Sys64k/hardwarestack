@@ -6,6 +6,7 @@ import {
   hasScores,
   hasReviewFigures,
   isSitemapPair,
+  pairAnalysis,
   pairFixes,
   pairHref,
   pairPath,
@@ -222,14 +223,18 @@ describe("relatedGpus / relatedCpus", () => {
     expect(relatedGpus(base, current, gpus, 1).map((g) => g.id)).toEqual(["g-near"]);
   });
 
-  it("lists closest sitemap-eligible CPUs, excluding the current one", () => {
+  it("lists the CPUs closest in gaming performance, not single-core score", () => {
+    // Gaming figures: 5800X3D 68.6, 9600X 72.6, 5600 53.7. By single-core score the 5600
+    // would be nearest; its X3D cache makes the 5800X3D game like a 9600X.
+    const x3d = cpu({ id: "c-5800x3d", modelName: "AMD Ryzen 7 5800X3D", singleCoreScore: 1700 });
     const cpus = [
-      base,
-      cpu({ id: "c-near", tier: "MID", singleCoreScore: 3400 }),
-      cpu({ id: "c-far", tier: "ENTRY", singleCoreScore: 2000 }),
-      cpu({ id: "c-mismatch", tier: "ENTHUSIAST", singleCoreScore: 3350 }),
+      x3d,
+      cpu({ id: "c-5600", modelName: "AMD Ryzen 5 5600", singleCoreScore: 1650 }),
+      cpu({ id: "c-9600x", modelName: "AMD Ryzen 5 9600X", singleCoreScore: 2100 }),
+      cpu({ id: "c-mismatch", modelName: "AMD Ryzen 5 9600X", tier: "ENTHUSIAST" }),
+      cpu({ id: "c-unreviewed", modelName: "AMD Ryzen 5 5500" }),
     ];
-    expect(relatedCpus(base, current, cpus).map((c) => c.id)).toEqual(["c-near", "c-far"]);
+    expect(relatedCpus(x3d, current, cpus).map((c) => c.id)).toEqual(["c-9600x", "c-5600"]);
   });
 
   it("returns nothing when no alternative qualifies", () => {
@@ -323,5 +328,50 @@ describe("pairFixes / fixHeading / fixMessage", () => {
     expect(fixMessage(fix, x3d, rtx5090)).toBe(
       "The NVIDIA GeForce RTX 5090 is already the fastest gaming graphics card in our list, so no upgrade removes it. The CPU has power to spare here."
     );
+  });
+});
+
+describe("pairAnalysis", () => {
+  const x3d = cpu({ modelName: "AMD Ryzen 7 9800X3D" });
+  const card = gpu({ modelName: "AMD Radeon RX 9070 XT" });
+  const cpuRow = (resolution: Resolution, pct: number, gpuUtilization: number): ResolutionResult => ({
+    resolution,
+    result: { cpuUtilization: 100, gpuUtilization, ramUtilization: 80, bottleneckComponent: "CPU", bottleneckPercentage: pct },
+  });
+  const gpuRow = (resolution: Resolution, pct: number, cpuUtilization: number): ResolutionResult => ({
+    resolution,
+    result: { cpuUtilization, gpuUtilization: 100, ramUtilization: 80, bottleneckComponent: "GPU", bottleneckPercentage: pct },
+  });
+
+  it("states each part's standing, the best resolution and what goes unused", () => {
+    const results = [cpuRow("1080p", 20, 80), row("1440p", "Balanced", 4), gpuRow("4K", 55, 45)];
+    expect(pairAnalysis(x3d, card, results)).toEqual([
+      "Among CPUs, the AMD Ryzen 7 9800X3D games at 97% of the speed of the fastest in our list. Among graphics cards, the AMD Radeon RX 9070 XT reaches 70% of the fastest.",
+      "1440p suits this pair best: the two are within 4% of each other there, so neither waits on the other.",
+      "At 1080p, about 20% of the AMD Radeon RX 9070 XT's power goes unused, because the CPU can't prepare frames fast enough.",
+      "At 4K, the graphics card sets the frame rate, and about 55% of the AMD Ryzen 7 9800X3D's power goes unused.",
+    ]);
+  });
+
+  it("names the limit at the best resolution when none is balanced, and uses the worst row per part", () => {
+    const results = [gpuRow("1080p", 15, 85), gpuRow("1440p", 40, 60), gpuRow("4K", 70, 30)];
+    const [, best, unused] = pairAnalysis(x3d, card, results);
+    expect(best).toBe(
+      "1080p is the closest match for this pair, though the GPU is still the limit there: the graphics card sets the frame rate, and about 15% of the AMD Ryzen 7 9800X3D's power goes unused."
+    );
+    expect(unused).toBe("At 4K, the graphics card sets the frame rate, and about 70% of the AMD Ryzen 7 9800X3D's power goes unused.");
+    expect(pairAnalysis(x3d, card, results)).toHaveLength(3);
+  });
+
+  it("doesn't repeat the best resolution when it is also the worst for its part", () => {
+    const results = [cpuRow("1080p", 22, 78), gpuRow("1440p", 30, 70), gpuRow("4K", 68, 32)];
+    const sentences = pairAnalysis(x3d, card, results);
+    expect(sentences.filter((s) => s.includes("1080p"))).toHaveLength(1);
+    expect(sentences).toHaveLength(3);
+  });
+
+  it("marks an estimated figure", () => {
+    const unreviewed = cpu({ modelName: "Unreviewed CPU", singleCoreScore: 3300 });
+    expect(pairAnalysis(unreviewed, card, [row("1080p", "Balanced", 2)])[0]).toMatch(/% \(estimated\) of the speed/);
   });
 });

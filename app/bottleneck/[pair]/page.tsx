@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCpus, getGpus } from "@/lib/hardware-queries";
-import { hasScores, pairFixes, pairPath, pairSummary, parsePairSlug, relatedCpus, relatedGpus } from "@/lib/pair-pages";
+import { hasScores, pairAnalysis, pairFixes, pairPath, pairSummary, parsePairSlug, relatedCpus, relatedGpus } from "@/lib/pair-pages";
 import { hasAffiliateTag } from "@/lib/shopping-links";
 import { SITE_URL } from "@/lib/site";
 import { toSlug } from "@/lib/slug";
@@ -56,6 +56,7 @@ export default async function PairPage({ params }: Props) {
   const { cpu, gpu, cpus, gpus } = found;
 
   const { results, best, verdict } = pairSummary(cpu, gpu);
+  const analysis = pairAnalysis(cpu, gpu, results, best);
   const fixes = pairFixes(cpu, gpu, cpus, gpus, results);
   const otherGpus = relatedGpus(cpu, gpu, gpus);
   const otherCpus = relatedCpus(cpu, gpu, cpus);
@@ -123,6 +124,15 @@ export default async function PairPage({ params }: Props) {
               calculator for a tailored result. <CpuGamingSource modelName={cpu.modelName} />{" "}
               <GpuGamingSource modelName={gpu.modelName} />
             </p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-5 flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-slate-800">About this pair</h2>
+            {analysis.map((sentence) => (
+              <p key={sentence} className="text-sm text-slate-600 leading-relaxed">
+                {sentence}
+              </p>
+            ))}
           </div>
 
           <PairFixes fixes={fixes} cpu={cpu} gpu={gpu} />
