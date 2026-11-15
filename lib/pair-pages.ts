@@ -2,6 +2,7 @@ import { RESOLUTIONS, calculateBottleneck } from "./bottleneck";
 import { measuredGamingIndex } from "./cpu-gaming-index";
 import { gpuGamingScore, measuredGpuIndex } from "./gpu-gaming-index";
 import { toSlug } from "./slug";
+import { needsNewPlatform, planPartNames, planResolves, planUpgrade, type UpgradePlan } from "./upgrade";
 import type {
   BottleneckResult,
   CpuOption,
@@ -105,26 +106,6 @@ export function bestResolution(results: ResolutionResult[]): Resolution {
   ).resolution;
 }
 
-export interface WorstBottleneck {
-  resolution: Resolution;
-  component: "CPU" | "GPU";
-}
-
-// The resolution with the largest CPU/GPU imbalance, or null when every resolution is balanced.
-// Pair pages assume good RAM, so a RAM bottleneck can't occur here.
-export function worstBottleneck(results: ResolutionResult[]): WorstBottleneck | null {
-  let worst: WorstBottleneck | null = null;
-  let worstPct = -1;
-  for (const { resolution, result } of results) {
-    const component = result.bottleneckComponent;
-    if ((component === "CPU" || component === "GPU") && result.bottleneckPercentage > worstPct) {
-      worst = { resolution, component };
-      worstPct = result.bottleneckPercentage;
-    }
-  }
-  return worst;
-}
-
 function joinList(items: string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
@@ -192,10 +173,91 @@ export function relatedCpus(
     .slice(0, limit);
 }
 
+// What removes the bottleneck at the resolutions where one part is the limit. Resolutions
+// with the same limit and the same suggested parts share one entry.
+export interface PairFix {
+  resolutions: Resolution[];
+  component: "CPU" | "GPU";
+  plan: UpgradePlan | null; // null: no faster part in the catalogue
+  resolves: boolean;        // planResolves(plan), kept so entries compare cheaply
+  closest: string | null;   // the strongest suggested part (last in plan order)
+}
+
+function sameParts(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((name, i) => name === b[i]);
+}
+
+// `results` defaults to pairResults; the page passes the ones it already has.
+export function pairFixes(
+  cpu: CpuOption,
+  gpu: GpuOption,
+  cpus: CpuOption[],
+  gpus: GpuOption[],
+  results: ResolutionResult[] = pairResults(cpu, gpu)
+): PairFix[] {
+  const fixes: PairFix[] = [];
+  for (const { resolution, result } of results) {
+    const component = result.bottleneckComponent;
+    if (component !== "CPU" && component !== "GPU") continue;
+    // Pair pages assume good RAM, as in pairResults, so there's no RAM to upgrade.
+    const plan = planUpgrade({ target: component, cpu, gpu, ram: undefined, cpus, gpus, rams: [], resolution });
+    const resolves = plan !== null && planResolves(plan);
+    const parts = planPartNames(plan);
+    const prev = fixes.at(-1);
+    if (prev && prev.component === component && prev.resolves === resolves && sameParts(planPartNames(prev.plan), parts)) {
+      prev.resolutions.push(resolution);
+    } else {
+      fixes.push({ resolutions: [resolution], component, plan, resolves, closest: parts.at(-1) ?? null });
+    }
+  }
+  return fixes;
+}
+
+const PART_NOUN: Record<"CPU" | "GPU", string> = { CPU: "CPU", GPU: "graphics card" };
+
+// The heading over one fix, e.g. "1080p and 1440p: the CPU is the limit".
+export function fixHeading(fix: PairFix): string {
+  return `${joinList(fix.resolutions)}: the ${fix.component} is the limit`;
+}
+
+const SPARE_GPU_NOTE = "The graphics card has power to spare: a higher resolution puts it to use.";
+const SPARE_CPU_NOTE = "The CPU has power to spare here.";
+const UPSCALING_4K_NOTE = "At 4K that's normal: upscaling (DLSS, FSR or XeSS) or lower settings are the usual fix.";
+
+type FixOutcome = "upgrade" | "new-platform" | "already-fastest" | "narrows-gap";
+
+function fixOutcome(fix: PairFix): FixOutcome {
+  if (!fix.plan) return "already-fastest";
+  if (!fix.resolves) return "narrows-gap";
+  return needsNewPlatform(fix.plan) ? "new-platform" : "upgrade";
+}
+
+// The sentence under the heading. When a part removes the bottleneck, the page lists it
+// (with how it fits) below this; otherwise this sentence is the whole answer.
+export function fixMessage(fix: PairFix, cpu: CpuOption, gpu: GpuOption): string {
+  const noun = PART_NOUN[fix.component];
+  // The other part is idle while this one is the limit.
+  const spare = fix.component === "CPU" ? SPARE_GPU_NOTE : SPARE_CPU_NOTE;
+  switch (fixOutcome(fix)) {
+    case "upgrade":
+      return `The smallest ${noun} upgrade that removes it:`;
+    case "new-platform":
+      return "No CPU that fits the current motherboard removes it; a new platform does:";
+    case "already-fastest": {
+      const current = fix.component === "CPU" ? cpu.modelName : gpu.modelName;
+      return `The ${current} is already the fastest gaming ${noun} in our list, so no upgrade removes it. ${spare}`;
+    }
+    case "narrows-gap": {
+      const gap = `No ${noun} in our list removes it; even the ${fix.closest} only narrows the gap.`;
+      if (fix.component === "CPU") return `${gap} ${spare}`;
+      return fix.resolutions.includes("4K") ? `${gap} ${UPSCALING_4K_NOTE}` : gap;
+    }
+  }
+}
+
 export interface PairSummary {
   results: ResolutionResult[];
   best: Resolution;
-  worst: WorstBottleneck | null;
   verdict: string;
 }
 
@@ -204,7 +266,6 @@ export function pairSummary(cpu: CpuOption, gpu: GpuOption): PairSummary {
   return {
     results,
     best: bestResolution(results),
-    worst: worstBottleneck(results),
     verdict: pairVerdict(results),
   };
 }

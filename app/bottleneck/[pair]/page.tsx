@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCpus, getGpus, getRams } from "@/lib/hardware-queries";
-import { hasScores, pairPath, pairSummary, parsePairSlug, relatedCpus, relatedGpus } from "@/lib/pair-pages";
+import { getCpus, getGpus } from "@/lib/hardware-queries";
+import { hasScores, pairFixes, pairPath, pairSummary, parsePairSlug, relatedCpus, relatedGpus } from "@/lib/pair-pages";
 import { hasAffiliateTag } from "@/lib/shopping-links";
 import { SITE_URL } from "@/lib/site";
 import { toSlug } from "@/lib/slug";
@@ -11,8 +11,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { BottleneckBadge } from "@/components/detail/BottleneckBadge";
 import { CpuGamingSource } from "@/components/detail/CpuGamingSource";
 import { GpuGamingSource } from "@/components/detail/GpuGamingSource";
+import { PairFixes } from "@/components/detail/PairFixes";
 import { ShopLink } from "@/components/monetization/ShopLink";
-import { UpgradeCard } from "@/components/monetization/UpgradeCard";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +51,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PairPage({ params }: Props) {
   const { pair } = await params;
-  const [found, rams] = await Promise.all([findPair(pair), getRams()]);
+  const found = await findPair(pair);
   if (!found) notFound();
   const { cpu, gpu, cpus, gpus } = found;
 
-  const { results, best, worst, verdict } = pairSummary(cpu, gpu);
+  const { results, best, verdict } = pairSummary(cpu, gpu);
+  const fixes = pairFixes(cpu, gpu, cpus, gpus, results);
   const otherGpus = relatedGpus(cpu, gpu, gpus);
   const otherCpus = relatedCpus(cpu, gpu, cpus);
 
@@ -124,17 +125,7 @@ export default async function PairPage({ params }: Props) {
             </p>
           </div>
 
-          {worst && (
-            <UpgradeCard
-              bottleneckComponent={worst.component}
-              cpu={cpu}
-              gpu={gpu}
-              cpus={cpus}
-              gpus={gpus}
-              rams={rams}
-              resolution={worst.resolution}
-            />
-          )}
+          <PairFixes fixes={fixes} cpu={cpu} gpu={gpu} />
 
           {(otherGpus.length > 0 || otherCpus.length > 0) && (
             <div className="grid gap-4 sm:grid-cols-2">
