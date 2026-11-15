@@ -1,13 +1,14 @@
-import { formatContext, formatMeasuredSpeed, formatSpeed } from "@/lib/ai-format";
+import { formatContext, formatMeasuredSpeed, formatSeconds, formatSpeed } from "@/lib/ai-format";
 import { SPEED_TEST, type SpeedRow } from "@/lib/measured-llm-speed";
 
 interface Props {
   modelName: string;
   ollamaTag: string;
+  promptTokens: number;
   rows: SpeedRow[];
 }
 
-export function MeasuredSpeedCard({ modelName, ollamaTag, rows }: Props) {
+export function MeasuredSpeedCard({ modelName, ollamaTag, promptTokens, rows }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -22,6 +23,7 @@ export function MeasuredSpeedCard({ modelName, ollamaTag, rows }: Props) {
               <th className="px-4 py-2">Context</th>
               <th className="px-4 py-2 text-right">Writing</th>
               <th className="px-4 py-2 text-right">Reading the prompt</th>
+              <th className="px-4 py-2 text-right">First word after</th>
               <th className="px-4 py-2 text-right">Calculator estimate</th>
             </tr>
           </thead>
@@ -35,6 +37,9 @@ export function MeasuredSpeedCard({ modelName, ollamaTag, rows }: Props) {
                 <td className="px-4 py-2.5 text-right tabular-nums text-slate-700 whitespace-nowrap">
                   {formatMeasuredSpeed(r.promptTokensPerSecond)}
                 </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-700 whitespace-nowrap">
+                  {formatSeconds(r.firstTokenSeconds)}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-slate-400 whitespace-nowrap">
                   {formatSpeed(r.estimatedTokensPerSecond)}
                 </td>
@@ -46,13 +51,18 @@ export function MeasuredSpeedCard({ modelName, ollamaTag, rows }: Props) {
       <p className="px-4 py-2.5 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
         <code className="font-mono">{ollamaTag}</code> in Ollama {SPEED_TEST.ollamaVersion} on {SPEED_TEST.cpu},{" "}
         {SPEED_TEST.ramLabel}, with the desktop using about {SPEED_TEST.desktopVramGb} GB of VRAM. Median of {SPEED_TEST.runs} runs: a
-        prompt of about {SPEED_TEST.promptTokens.toLocaleString("en-US")} tokens of code, then{" "}
-        {SPEED_TEST.generatedTokens} tokens written. Context is the window reserved, not filled; a nearly full window
-        is slower. Where the window doesn&apos;t fit in VRAM, part of {modelName} runs on the CPU.{" "}
+        prompt of {promptTokens.toLocaleString("en-US")} tokens of code, then{" "}
+        {SPEED_TEST.generatedTokens} tokens written.{" "}
         <a href={SPEED_TEST.scriptUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-600">
           Benchmark script
         </a>
         .
+      </p>
+      <p className="px-4 pb-2.5 text-[11px] text-slate-400 leading-relaxed">
+        Context is the window reserved, not filled; a nearly full window is slower. Where the window doesn&apos;t fit
+        in VRAM, part of {modelName} runs on the CPU. &ldquo;First word after&rdquo; is the time to read the whole test
+        prompt. A coding agent resends its files every turn, and Ollama reuses the part it has already read, so later
+        turns mostly wait for the new part.
       </p>
     </div>
   );

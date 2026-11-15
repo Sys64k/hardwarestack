@@ -32,6 +32,7 @@ describe("MEASURED_SPEEDS", () => {
         expect(p.generationTokensPerSecond).toBeGreaterThan(0);
         expect(p.promptTokensPerSecond).toBeGreaterThan(0);
       }
+      expect(m.promptTokens, m.ollamaTag).toBeGreaterThan(0);
     }
   });
 
@@ -63,6 +64,12 @@ describe("speedRows", () => {
     const rows = speedRows(getLlmModel("qwen3-coder-30b-a3b")!, measured);
     expect(rows.map((r) => r.contextTokens)).toEqual(measured.points.map((p) => p.contextTokens));
     for (const r of rows) expect(r.estimatedTokensPerSecond).toBeGreaterThan(0);
+  });
+
+  it("derives the time to the first word from the measured prompt size and speed", () => {
+    const measured = getMeasuredSpeed("gpt-oss-20b")!;
+    const [first] = speedRows(getLlmModel("gpt-oss-20b")!, measured);
+    expect(first.firstTokenSeconds).toBeCloseTo(3270 / 5336, 5); // ~0.6 s
   });
 
   // The estimator's constants are fitted to these measurements (lib/ai-fit.ts). This keeps
