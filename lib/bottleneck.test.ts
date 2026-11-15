@@ -101,6 +101,26 @@ describe("calculateBottleneck", () => {
     expect(result.bottleneckComponent).toBe("RAM");
   });
 
+  it("blames RAM when the CPU, without the RAM penalty, is within the balanced threshold", () => {
+    // Raw CPU 5% short of the GPU: balanced without the penalty, so the RAM is the culprit
+    const slowRam = ram({ speedMhz: 2133, channels: 1 });
+    const result = calculateBottleneck(cpu(), gpuAtFps(cpuFps(cpu()) / 0.95), "1080p", slowRam);
+    expect(result.bottleneckComponent).toBe("RAM");
+  });
+
+  it("blames the CPU when it falls short even without the RAM penalty", () => {
+    // Raw CPU 15% short of the GPU (rf ≈ 0.824 so raw / rf would wrongly clear it)
+    const slowRam = ram({ speedMhz: 2133, channels: 1 });
+    const result = calculateBottleneck(cpu(), gpuAtFps(cpuFps(cpu()) / 0.85), "1080p", slowRam);
+    expect(result.bottleneckComponent).toBe("CPU");
+  });
+
+  it("blames the CPU, not mildly slow RAM, when the penalty is under 5%", () => {
+    // DDR4-3200 dual: rf ≈ 0.972, too small to call RAM the bottleneck
+    const result = calculateBottleneck(cpu(), gpuAtFps(cpuFps(cpu()) * 1.5), "1080p", ram({ speedMhz: 3200 }));
+    expect(result.bottleneckComponent).toBe("CPU");
+  });
+
   it("RAM at reference speed applies no penalty", () => {
     const refRam = ram({ speedMhz: 3600, channels: 2 }); // DDR4-3600 dual = reference
     const withRam = calculateBottleneck(cpu(), gpu({ rasterScore: 5000 }), "1080p", refRam);
