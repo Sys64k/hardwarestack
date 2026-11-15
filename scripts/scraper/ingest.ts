@@ -4,8 +4,7 @@
  * Usage:
  *   npm run scraper:cpus        – scrape + normalise CPUs → DB
  *   npm run scraper:gpus        – scrape + normalise GPUs → DB
- *   npm run scraper:amazon      – enrich DB entries with Amazon ASINs + prices
- *   npm run scraper:all         – run all three in sequence
+ *   npm run scraper:all         – run both in sequence
  *
  * Intermediate results are cached in scripts/scraper/.cache/ so a failed run
  * can resume without re-scraping or re-calling the Claude API.
@@ -17,7 +16,6 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { scrapeCpus, scrapeGpus } from "./sources/passmark";
-import { searchAmazon } from "./sources/amazon";
 import { normalizeCpus, normalizeGpus } from "./normalizer";
 import { prisma } from "./db";
 import type { NormalizedCpu, NormalizedGpu } from "./types";
@@ -125,97 +123,6 @@ async function runGpus() {
   console.log(`  Upserted ${upserted} GPUs ✓`);
 }
 
-// ─── Amazon enrichment pipeline ──────────────────────────────────────────────
-
-async function runAmazon() {
-  console.log("\n=== Amazon enrichment pipeline ===");
-
-  const [cpus, gpus, rams] = await Promise.all([
-    prisma.cpu.findMany({ include: { retailLinks: true } }),
-    prisma.gpu.findMany({ include: { retailLinks: true } }),
-    prisma.ram.findMany({ include: { retailLinks: true } }),
-  ]);
-
-  // Only enrich entries that have no retail link yet
-  const cpusToEnrich = cpus.filter((c) => c.retailLinks.length === 0);
-  const gpusToEnrich = gpus.filter((g) => g.retailLinks.length === 0);
-  const ramsToEnrich = rams.filter((r) => r.retailLinks.length === 0);
-
-  console.log(
-    `  Enriching ${cpusToEnrich.length} CPUs, ${gpusToEnrich.length} GPUs, ${ramsToEnrich.length} RAM kits`
-  );
-
-  const DELAY_MS = 3000; // be respectful to Amazon
-
-  for (const cpu of cpusToEnrich) {
-    console.log(`  Searching Amazon: ${cpu.modelName}`);
-    const hit = await searchAmazon(cpu.modelName, "cpu");
-    if (hit) {
-      await prisma.retailLink.upsert({
-        where: { asin: hit.asin },
-        update: { currentPrice: hit.price },
-        create: {
-          asin: hit.asin,
-          retailTitle: hit.title,
-          currentPrice: hit.price,
-          currency: hit.currency,
-          cpuId: cpu.id,
-        },
-      });
-      console.log(`    ✓ ASIN ${hit.asin}${hit.price ? ` — €${hit.price}` : ""}`);
-    } else {
-      console.log(`    ✗ No result`);
-    }
-    await new Promise((r) => setTimeout(r, DELAY_MS));
-  }
-
-  for (const gpu of gpusToEnrich) {
-    console.log(`  Searching Amazon: ${gpu.modelName}`);
-    const hit = await searchAmazon(gpu.modelName, "gpu");
-    if (hit) {
-      await prisma.retailLink.upsert({
-        where: { asin: hit.asin },
-        update: { currentPrice: hit.price },
-        create: {
-          asin: hit.asin,
-          retailTitle: hit.title,
-          currentPrice: hit.price,
-          currency: hit.currency,
-          gpuId: gpu.id,
-        },
-      });
-      console.log(`    ✓ ASIN ${hit.asin}${hit.price ? ` — €${hit.price}` : ""}`);
-    } else {
-      console.log(`    ✗ No result`);
-    }
-    await new Promise((r) => setTimeout(r, DELAY_MS));
-  }
-
-  for (const ram of ramsToEnrich) {
-    console.log(`  Searching Amazon: ${ram.modelName}`);
-    const hit = await searchAmazon(ram.modelName, "ram");
-    if (hit) {
-      await prisma.retailLink.upsert({
-        where: { asin: hit.asin },
-        update: { currentPrice: hit.price },
-        create: {
-          asin: hit.asin,
-          retailTitle: hit.title,
-          currentPrice: hit.price,
-          currency: hit.currency,
-          ramId: ram.id,
-        },
-      });
-      console.log(`    ✓ ASIN ${hit.asin}${hit.price ? ` — €${hit.price}` : ""}`);
-    } else {
-      console.log(`    ✗ No result`);
-    }
-    await new Promise((r) => setTimeout(r, DELAY_MS));
-  }
-
-  console.log("  Amazon enrichment complete ✓");
-}
-
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 const MODE = process.argv[2] ?? "all";
@@ -224,7 +131,6 @@ async function main() {
   try {
     if (MODE === "cpus" || MODE === "all") await runCpus();
     if (MODE === "gpus" || MODE === "all") await runGpus();
-    if (MODE === "amazon" || MODE === "all") await runAmazon();
   } finally {
     await prisma.$disconnect();
   }

@@ -36,10 +36,3 @@ export interface NormalizedGpu {
   tier: Tier;
   rasterScore: number; // derived from PassMark score
 }
-
-export interface AmazonHit {
-  asin: string;
-  title: string;
-  price: number | null;
-  currency: string;
-}
