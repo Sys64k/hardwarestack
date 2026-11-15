@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RESOLUTIONS, calculateBottleneck } from "@/lib/bottleneck";
 import { pairHref } from "@/lib/pair-pages";
+import { TIER_LABELS, byCpuGamingScore, byGpuGamingScore, cpuGamingTier, gpuGamingTier, groupByTier } from "@/lib/tiers";
 import { SOCKET_LABELS, SOCKET_ORDER, isRamCompatible, ramTypesForSocket } from "@/lib/platform";
 import type {
   CpuOption,
@@ -32,23 +33,6 @@ interface Props {
   ) => void;
 }
 
-const TIER_ORDER = ["ENTRY", "MID", "HIGH", "ULTRA", "ENTHUSIAST"] as const;
-const TIER_LABELS: Record<string, string> = {
-  ENTRY: "Entry",
-  MID: "Mid-Range",
-  HIGH: "High-End",
-  ULTRA: "Ultra",
-  ENTHUSIAST: "Enthusiast",
-};
-
-function groupByTier<T extends { tier: string }>(
-  items: T[]
-): { tier: string; items: T[] }[] {
-  return TIER_ORDER.filter((t) => items.some((i) => i.tier === t)).map(
-    (tier) => ({ tier, items: items.filter((i) => i.tier === tier) })
-  );
-}
-
 function groupBySocket(
   items: CpuOption[]
 ): { socket: string; items: CpuOption[] }[] {
@@ -57,13 +41,7 @@ function groupBySocket(
   const rest = present.filter((s) => !SOCKET_ORDER.includes(s as never));
   return [...ordered, ...rest].map((socket) => ({
     socket,
-    items: items
-      .filter((c) => (c.socket ?? "Unknown") === socket)
-      .sort(
-        (a, b) =>
-          TIER_ORDER.indexOf(b.tier as never) -
-          TIER_ORDER.indexOf(a.tier as never)
-      ),
+    items: byCpuGamingScore(items.filter((c) => (c.socket ?? "Unknown") === socket)),
   }));
 }
 
@@ -140,8 +118,9 @@ export function BottleneckCalculator({
   }, [selectedCpuId, selectedGpuId, selectedRamId, resolution, onResultChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cpuGroups = groupBySocket(cpus);
-  const gpuGroups = groupByTier(gpus);
-  const ramGroups = groupByTier(compatibleRams);
+  const gpuGroups = groupByTier(byGpuGamingScore(gpus), gpuGamingTier);
+  // RAM has no gaming index, so it keeps its stored tier.
+  const ramGroups = groupByTier(compatibleRams, (r) => r.tier);
 
   const pairUrl = selectedCpu && selectedGpu ? pairHref(selectedCpu, selectedGpu) : null;
 
@@ -190,7 +169,7 @@ export function BottleneckCalculator({
                 options: items.map(cpu => ({
                   value: cpu.id,
                   label: cpu.modelName,
-                  meta: TIER_LABELS[cpu.tier],
+                  meta: TIER_LABELS[cpuGamingTier(cpu)],
                 })),
               }))}
             />

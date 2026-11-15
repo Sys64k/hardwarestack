@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { withGpuGamingTier } from "@/lib/tiers";
 import { GpuList } from "@/components/gpus/GpuList";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default async function GpusPage() {
-  const gpus = await prisma.gpu.findMany({
-    orderBy: [{ tier: "desc" }, { rasterScore: "desc" }],
-  });
+  // Grouped and ordered by gaming performance, not the stored segment tier.
+  const rows = await prisma.gpu.findMany();
+  const gpus = withGpuGamingTier(rows);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">

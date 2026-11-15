@@ -1,6 +1,8 @@
 import { QUANT_LEVELS } from "./llm-models";
 import type { GpuOption, RamOption } from "@/types/hardware";
 import type { LlmModel, QuantId } from "@/types/local-ai";
+import { TIER_RANK } from "./tiers";
+import type { TierType } from "@/types/hardware";
 
 // Capacities are GiB: a "24 GB" card has 24 GiB. Bandwidths are decimal GB/s.
 const BYTES_PER_GIB = 1024 ** 3;
@@ -172,4 +174,13 @@ export function recommendQuant(
     fit: checkFit({ model, quant, contextTokens, gpu, ram }),
   }));
   return options.find((o) => o.fit.status === "gpu") ?? options[options.length - 1];
+}
+
+// Order for "GPUs that fit": the smallest card that fits first, then the lower gaming tier
+// (usually the cheaper card).
+export function compareFittingGpus(
+  a: { vramGb: number; gamingTier: TierType },
+  b: { vramGb: number; gamingTier: TierType }
+): number {
+  return a.vramGb - b.vramGb || TIER_RANK[a.gamingTier] - TIER_RANK[b.gamingTier];
 }

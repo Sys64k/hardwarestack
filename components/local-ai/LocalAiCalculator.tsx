@@ -6,7 +6,7 @@ import { ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { checkFit, estimateMemory, minVramGb, recommendQuant } from "@/lib/ai-fit";
+import { checkFit, compareFittingGpus, estimateMemory, minVramGb, recommendQuant } from "@/lib/ai-fit";
 import type { FitResult, SystemRamSpec } from "@/lib/ai-fit";
 import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmModel } from "@/lib/llm-models";
 import { buildPcPartPickerUrl } from "@/lib/shopping-links";
@@ -15,20 +15,12 @@ import { formatGb, formatSpeed } from "@/lib/ai-format";
 import { StatusBadge } from "@/components/local-ai/StatusBadge";
 import type { GpuOption } from "@/types/hardware";
 import type { QuantId } from "@/types/local-ai";
+import { TIER_LABELS, groupByTier, type WithGamingTier } from "@/lib/tiers";
 
-export type LocalAiGpu = Pick<GpuOption, "id" | "modelName" | "tier" | "vramGb" | "memoryBandwidthGbs">;
+export type LocalAiGpu = WithGamingTier<Pick<GpuOption, "id" | "modelName" | "vramGb" | "memoryBandwidthGbs">>;
 
 type Mode = "gpu" | "model";
 type RamType = "DDR4" | "DDR5";
-
-const TIER_ORDER = ["ENTRY", "MID", "HIGH", "ULTRA", "ENTHUSIAST"] as const;
-const TIER_LABELS: Record<string, string> = {
-  ENTRY: "Entry",
-  MID: "Mid-Range",
-  HIGH: "High-End",
-  ULTRA: "Ultra",
-  ENTHUSIAST: "Enthusiast",
-};
 
 const RAM_SIZES = [16, 32, 64, 128] as const;
 // Typical dual-channel kits; only used for the offload speed estimate.
@@ -108,13 +100,10 @@ export function LocalAiCalculator({ gpus, defaultGpuId, defaultModelSlug }: Loca
     if (m && !m.quants.includes(quant)) setQuant(m.quants[0]);
   }
 
-  const gpuGroups = TIER_ORDER.filter((t) => gpus.some((g) => g.tier === t))
-    .map((tier) => ({
-      label: TIER_LABELS[tier],
-      options: gpus
-        .filter((g) => g.tier === tier)
-        .map((g) => ({ value: g.id, label: g.modelName, meta: `${g.vramGb} GB` })),
-    }));
+  const gpuGroups = groupByTier(gpus, (g) => g.gamingTier).map(({ tier, items }) => ({
+    label: TIER_LABELS[tier],
+    options: items.map((g) => ({ value: g.id, label: g.modelName, meta: `${g.vramGb} GB` })),
+  }));
 
   const modelGroups = [...new Set(LLM_MODELS.map((m) => m.family))].map((family) => ({
     label: family,
@@ -333,11 +322,10 @@ function GpusForModel({
   const neededVram = minVramGb(model, quant, contextTokens);
   const clamped = contextTokens > model.maxContextTokens;
 
-  const TIER_RANK: Record<string, number> = { ENTRY: 0, MID: 1, HIGH: 2, ULTRA: 3, ENTHUSIAST: 4 };
   const fitting = gpus
     .map((gpu) => ({ gpu, fit: checkFit({ model, quant, contextTokens, gpu, ram }) }))
     .filter((r) => r.fit.status === "gpu")
-    .sort((a, b) => a.gpu.vramGb - b.gpu.vramGb || (TIER_RANK[a.gpu.tier] ?? 0) - (TIER_RANK[b.gpu.tier] ?? 0))
+    .sort((a, b) => compareFittingGpus(a.gpu, b.gpu))
     .slice(0, 8);
 
   const breakdown = [

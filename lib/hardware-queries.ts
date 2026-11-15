@@ -4,6 +4,7 @@ import type { CpuOption, GpuOption, RamOption } from "@/types/hardware";
 
 export const getCpus = unstable_cache(
   async (): Promise<CpuOption[]> => {
+    // A stable default order only; pages that show tiers re-sort by gaming score (lib/tiers.ts).
     const rows = await prisma.cpu.findMany({
       orderBy: [{ tier: "asc" }, { singleCoreScore: "desc" }],
     });
@@ -15,6 +16,7 @@ export const getCpus = unstable_cache(
 
 export const getGpus = unstable_cache(
   async (): Promise<GpuOption[]> => {
+    // A stable default order only, as for getCpus.
     const rows = await prisma.gpu.findMany({
       orderBy: [{ tier: "asc" }, { rasterScore: "desc" }],
     });

@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { toSlug } from "@/lib/slug";
+import { TIERS_HIGHEST_FIRST, TIER_COLORS, TIER_LABELS, groupByTier } from "@/lib/tiers";
+import type { TierType } from "@/types/hardware";
 
 interface Cpu {
   id: string;
   modelName: string;
-  tier: string;
+  gamingTier: TierType;
   cores: number;
   threads: number;
   boostClockGhz: number;
@@ -16,26 +18,13 @@ interface Cpu {
   multiCoreScore: number | null;
 }
 
-const TIER_ORDER = ["ENTHUSIAST", "ULTRA", "HIGH", "MID", "ENTRY"] as const;
-const TIER_LABELS: Record<string, string> = {
-  ENTRY: "Entry", MID: "Mid-Range", HIGH: "High-End",
-  ULTRA: "Ultra", ENTHUSIAST: "Enthusiast",
-};
-const TIER_COLORS: Record<string, string> = {
-  ENTRY: "bg-slate-100 text-slate-600", MID: "bg-blue-50 text-blue-700",
-  HIGH: "bg-violet-50 text-violet-700", ULTRA: "bg-amber-50 text-amber-700",
-  ENTHUSIAST: "bg-red-50 text-red-700",
-};
-
 export function CpuList({ cpus }: { cpus: Cpu[] }) {
   const [query, setQuery] = useState("");
   const q = query.toLowerCase().trim();
 
   const filtered = q ? cpus.filter(c => c.modelName.toLowerCase().includes(q)) : cpus;
 
-  const groups = TIER_ORDER
-    .filter(t => filtered.some(c => c.tier === t))
-    .map(tier => ({ tier, items: filtered.filter(c => c.tier === tier) }));
+  const groups = groupByTier(filtered, c => c.gamingTier, TIERS_HIGHEST_FIRST);
 
   return (
     <div className="flex flex-col gap-6">

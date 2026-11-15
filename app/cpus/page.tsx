@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { withCpuGamingTier } from "@/lib/tiers";
 import { CpuList } from "@/components/cpus/CpuList";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CpusPage() {
-  const cpus = await prisma.cpu.findMany({
-    orderBy: [{ tier: "desc" }, { singleCoreScore: "desc" }],
-  });
+  // Grouped and ordered by gaming performance, not the stored segment tier.
+  const rows = await prisma.cpu.findMany();
+  const cpus = withCpuGamingTier(rows);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">

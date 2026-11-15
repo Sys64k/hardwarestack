@@ -16,7 +16,9 @@ Live at **[hardwarestack.dev](https://hardwarestack.dev)**
 | `/local-ai/coding-agents` | Agentic coding test results with measured speed, VRAM estimates and the smallest GPU per model |
 | `/local-ai`, `/local-ai/[model]` | Local AI calculator and per-model VRAM pages, plus agentic coding test results from the ASO experiment (data in `lib/agentic-coding-test.ts`) and speeds measured on the test machine (`lib/measured-llm-speed.ts`) |
 
-The sitemap lists the pair pages where both parts have a review figure and are at most one tier apart (about 1,150 of 6,800). The other pair pages still load (the calculator links to them) and are not noindexed; they're just not advertised to crawlers.
+The sitemap lists the pair pages where both parts have a review figure and are at most one tier apart (about 1,150 of 6,800). That rule uses the stored `tier`, the product segment the scraper assigns, which is close to price class. The other pair pages still load (the calculator links to them) and are not noindexed; they're just not advertised to crawlers.
+
+Everywhere a tier is shown (CPU and GPU pages and lists, calculator dropdowns, pairing tables, Local AI) it is the gaming tier from `lib/tiers.ts`, set from the gaming index by fixed floors (`CPU_TIER_FLOORS`, `GPU_TIER_FLOORS`). The stored tier follows product segment, so it would put an i9-12900K above a Ryzen 7 9800X3D.
 
 ## Stack
 

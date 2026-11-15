@@ -1,3 +1,4 @@
+import { cpuGamingTier, gpuGamingTier } from "./tiers";
 import { describe, it, expect } from "vitest";
 import {
   bestResolution,
@@ -127,6 +128,14 @@ describe("hasScores / isSitemapPair", () => {
     expect(isSitemapPair(cpu({ tier: "HIGH" }), gpu({ tier: "MID" }))).toBe(true);
     expect(isSitemapPair(cpu({ tier: "ENTRY" }), gpu({ tier: "HIGH" }))).toBe(false);
     expect(isSitemapPair(cpu({ tier: "ENTRY" }), gpu({ tier: "ENTHUSIAST" }))).toBe(false);
+  });
+
+  it("uses the stored segment tier, not the gaming tier", () => {
+    // Ryzen 5 5600 games at Entry and the RTX 4070 at High: two gaming tiers apart, but
+    // their stored tiers (MID, HIGH) are one apart, so the pair stays in the sitemap.
+    expect(cpuGamingTier(cpu())).toBe("ENTRY");
+    expect(gpuGamingTier(gpu())).toBe("HIGH");
+    expect(isSitemapPair(cpu(), gpu())).toBe(true);
   });
 
   it("excludes pairs missing a score even when tiers match", () => {
