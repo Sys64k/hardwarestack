@@ -49,6 +49,7 @@ export function calculateBottleneck(
   const effectiveGpuFps = gpuFps(gpu, resolution);
 
   const max = Math.max(effectiveCpuFps, effectiveGpuFps);
+  const fps = Math.min(effectiveCpuFps, effectiveGpuFps);
   const bottleneckPercentage =
     max > 0
       ? (Math.abs(effectiveCpuFps - effectiveGpuFps) / max) * 100
@@ -61,6 +62,7 @@ export function calculateBottleneck(
       ramUtilization: ramUtil,
       bottleneckComponent: "Balanced",
       bottleneckPercentage,
+      fps,
     };
   }
 
@@ -79,6 +81,7 @@ export function calculateBottleneck(
       ramUtilization: ramUtil,
       bottleneckComponent: isRamBottleneck ? "RAM" : "CPU",
       bottleneckPercentage,
+      fps,
     };
   }
 
@@ -88,5 +91,6 @@ export function calculateBottleneck(
     ramUtilization: ramUtil,
     bottleneckComponent: "GPU",
     bottleneckPercentage,
+    fps,
   };
 }

@@ -99,11 +99,15 @@ export function pairResults(cpu: CpuOption, gpu: GpuOption): ResolutionResult[] 
   }));
 }
 
-// Lowest imbalance wins; ties go to the higher resolution (better image for free).
+// The usual target for smooth play.
+export const PLAYABLE_FPS = 60;
+
+// The highest resolution where the pair still averages PLAYABLE_FPS, so a fast pair isn't
+// sent to 1080p just because it's best balanced there; 1080p when no resolution gets there.
+// `results` are in RESOLUTIONS order (lowest first), as pairResults returns them.
 export function bestResolution(results: ResolutionResult[]): Resolution {
-  return results.reduce((best, r) =>
-    r.result.bottleneckPercentage <= best.result.bottleneckPercentage ? r : best
-  ).resolution;
+  const playable = results.filter((r) => r.result.fps >= PLAYABLE_FPS);
+  return (playable.at(-1) ?? results[0])?.resolution ?? RESOLUTIONS[0];
 }
 
 function joinList(items: string[]): string {
@@ -269,10 +273,34 @@ function unusedClause(row: ResolutionResult, cpu: CpuOption, gpu: GpuOption): st
     : `the graphics card sets the frame rate, and about ${100 - row.result.cpuUtilization}% of the ${cpu.modelName}'s power goes unused`;
 }
 
+function bestOpening(resolution: Resolution, fps: number, playable: boolean): string {
+  return playable
+    ? `${resolution} is the best resolution for this pair: about ${fps} fps on average at high to ultra settings, the highest resolution that stays above ${PLAYABLE_FPS} fps.`
+    : `Even at ${resolution} this pair averages only about ${fps} fps at high to ultra settings, so reaching ${PLAYABLE_FPS} fps takes lower settings, upscaling or a faster graphics card.`;
+}
+
+// Which part sets the frame rate at the best resolution. A GPU limit there is stated plainly,
+// not as a problem: the fix block below offers the upgrade for anyone who wants more frames.
+function bestLimitClause(row: ResolutionResult, cpu: CpuOption, gpu: GpuOption, playable: boolean): string {
+  const limit = row.result.bottleneckComponent;
+  if (limit === "GPU") {
+    return playable ? "The graphics card sets the frame rate there; the CPU has frames to spare." : "The graphics card sets the frame rate there.";
+  }
+  if (limit === "CPU") return `The CPU is the limit there: ${unusedClause(row, cpu, gpu)}.`;
+  return "The two are well matched there.";
+}
+
+// The frame rate at the best resolution, and which part sets it there.
+function bestSentence(row: ResolutionResult, cpu: CpuOption, gpu: GpuOption): string {
+  const fps = Math.round(row.result.fps);
+  const playable = fps >= PLAYABLE_FPS;
+  return `${bestOpening(row.resolution, fps, playable)} ${bestLimitClause(row, cpu, gpu, playable)}`;
+}
+
 // A few sentences on this pair, from its gaming figures and bottleneck results: where each
-// part ranks, why the best resolution is best, and how much of the faster part goes unused
-// where the other one is the limit (once per part, at its worst resolution). `best` defaults
-// to bestResolution(results); the page passes the one pairSummary already has.
+// part ranks, the frame rate at the best resolution, and how much of the faster part goes
+// unused where the other one is the limit (once per part, at its worst resolution).
+// `best` defaults to bestResolution(results); the page passes the one pairSummary has.
 export function pairAnalysis(
   cpu: CpuOption,
   gpu: GpuOption,
@@ -287,15 +315,9 @@ export function pairAnalysis(
   ];
 
   const bestRow = results.find((r) => r.resolution === best);
-  if (bestRow) {
-    const gap = Math.round(bestRow.result.bottleneckPercentage);
-    sentences.push(
-      bestRow.result.bottleneckComponent === "Balanced"
-        ? `${best} suits this pair best: the two are within ${gap}% of each other there, so neither waits on the other.`
-        : `${best} is the closest match for this pair, though the ${bestRow.result.bottleneckComponent} is still the limit there: ${unusedClause(bestRow, cpu, gpu)}.`
-    );
-  }
+  if (bestRow) sentences.push(bestSentence(bestRow, cpu, gpu));
 
+  // The best resolution's limit is in its own sentence, so only the others are listed here.
   for (const component of ["CPU", "GPU"] as const) {
     const worst = worstFor(results, component);
     if (worst && worst.resolution !== best) sentences.push(`At ${worst.resolution}, ${unusedClause(worst, cpu, gpu)}.`);

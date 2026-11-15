@@ -6,6 +6,7 @@ import {
   hasScores,
   hasReviewFigures,
   isSitemapPair,
+  PLAYABLE_FPS,
   pairAnalysis,
   pairFixes,
   pairHref,
@@ -49,7 +50,8 @@ const gpu = (overrides: Partial<GpuOption> = {}): GpuOption => ({
 const row = (
   resolution: Resolution,
   bottleneckComponent: BottleneckComponent,
-  bottleneckPercentage: number
+  bottleneckPercentage: number,
+  fps = 100
 ): ResolutionResult => ({
   resolution,
   result: {
@@ -58,6 +60,7 @@ const row = (
     ramUtilization: 80,
     bottleneckComponent,
     bottleneckPercentage,
+    fps,
   },
 });
 
@@ -168,16 +171,27 @@ describe("pairResults", () => {
 });
 
 describe("bestResolution", () => {
-  it("picks the lowest imbalance", () => {
-    expect(bestResolution([row("1080p", "CPU", 30), row("1440p", "CPU", 5), row("4K", "GPU", 20)])).toBe(
+  it("picks the highest resolution that still averages 60 fps", () => {
+    expect(bestResolution([row("1080p", "CPU", 30, 200), row("1440p", "GPU", 20, 140), row("4K", "GPU", 50, 85)])).toBe("4K");
+    expect(bestResolution([row("1080p", "GPU", 20, 104), row("1440p", "GPU", 36, 73), row("4K", "GPU", 66, 38)])).toBe(
       "1440p"
     );
   });
 
-  it("prefers the higher resolution on a tie", () => {
-    expect(bestResolution([row("1080p", "Balanced", 4), row("1440p", "Balanced", 4), row("4K", "GPU", 40)])).toBe(
+  it("counts exactly 60 fps as playable", () => {
+    expect(bestResolution([row("1080p", "GPU", 20, 90), row("1440p", "GPU", 30, PLAYABLE_FPS), row("4K", "GPU", 60, 30)])).toBe(
       "1440p"
     );
+  });
+
+  it("falls back to 1080p when no resolution reaches 60 fps", () => {
+    expect(bestResolution([row("1080p", "GPU", 20, 52), row("1440p", "GPU", 30, 25), row("4K", "GPU", 60, 15)])).toBe(
+      "1080p"
+    );
+  });
+
+  it("returns 1080p for empty results", () => {
+    expect(bestResolution([])).toBe("1080p");
   });
 });
 
@@ -342,40 +356,49 @@ describe("pairFixes / fixHeading / fixMessage", () => {
 describe("pairAnalysis", () => {
   const x3d = cpu({ modelName: "AMD Ryzen 7 9800X3D" });
   const card = gpu({ modelName: "AMD Radeon RX 9070 XT" });
-  const cpuRow = (resolution: Resolution, pct: number, gpuUtilization: number): ResolutionResult => ({
+  const cpuRow = (resolution: Resolution, pct: number, gpuUtilization: number, fps: number): ResolutionResult => ({
     resolution,
-    result: { cpuUtilization: 100, gpuUtilization, ramUtilization: 80, bottleneckComponent: "CPU", bottleneckPercentage: pct },
+    result: { cpuUtilization: 100, gpuUtilization, ramUtilization: 80, bottleneckComponent: "CPU", bottleneckPercentage: pct, fps },
   });
-  const gpuRow = (resolution: Resolution, pct: number, cpuUtilization: number): ResolutionResult => ({
+  const gpuRow = (resolution: Resolution, pct: number, cpuUtilization: number, fps: number): ResolutionResult => ({
     resolution,
-    result: { cpuUtilization, gpuUtilization: 100, ramUtilization: 80, bottleneckComponent: "GPU", bottleneckPercentage: pct },
+    result: { cpuUtilization, gpuUtilization: 100, ramUtilization: 80, bottleneckComponent: "GPU", bottleneckPercentage: pct, fps },
   });
 
-  it("states each part's standing, the best resolution and what goes unused", () => {
-    const results = [cpuRow("1080p", 20, 80), row("1440p", "Balanced", 4), gpuRow("4K", 55, 45)];
+  it("states each part's standing, the best resolution's frame rate and what goes unused elsewhere", () => {
+    const results = [cpuRow("1080p", 20, 80, 160), row("1440p", "Balanced", 4, 120), gpuRow("4K", 55, 45, 55)];
     expect(pairAnalysis(x3d, card, results)).toEqual([
       "Among CPUs, the AMD Ryzen 7 9800X3D games at 97% of the speed of the fastest in our list. Among graphics cards, the AMD Radeon RX 9070 XT reaches 70% of the fastest.",
-      "1440p suits this pair best: the two are within 4% of each other there, so neither waits on the other.",
+      "1440p is the best resolution for this pair: about 120 fps on average at high to ultra settings, the highest resolution that stays above 60 fps. The two are well matched there.",
       "At 1080p, about 20% of the AMD Radeon RX 9070 XT's power goes unused, because the CPU can't prepare frames fast enough.",
       "At 4K, the graphics card sets the frame rate, and about 55% of the AMD Ryzen 7 9800X3D's power goes unused.",
     ]);
   });
 
-  it("names the limit at the best resolution when none is balanced, and uses the worst row per part", () => {
-    const results = [gpuRow("1080p", 15, 85), gpuRow("1440p", 40, 60), gpuRow("4K", 70, 30)];
-    const [, best, unused] = pairAnalysis(x3d, card, results);
-    expect(best).toBe(
-      "1080p is the closest match for this pair, though the GPU is still the limit there: the graphics card sets the frame rate, and about 15% of the AMD Ryzen 7 9800X3D's power goes unused."
+  it("presents a GPU limit at the best resolution as expected, and skips repeating it", () => {
+    const results = [gpuRow("1080p", 15, 85, 200), gpuRow("1440p", 40, 60, 140), gpuRow("4K", 70, 30, 85)];
+    const sentences = pairAnalysis(x3d, card, results);
+    expect(sentences[1]).toBe(
+      "4K is the best resolution for this pair: about 85 fps on average at high to ultra settings, the highest resolution that stays above 60 fps. The graphics card sets the frame rate there; the CPU has frames to spare."
     );
-    expect(unused).toBe("At 4K, the graphics card sets the frame rate, and about 70% of the AMD Ryzen 7 9800X3D's power goes unused.");
-    expect(pairAnalysis(x3d, card, results)).toHaveLength(3);
+    expect(sentences).toHaveLength(2);
   });
 
-  it("doesn't repeat the best resolution when it is also the worst for its part", () => {
-    const results = [cpuRow("1080p", 22, 78), gpuRow("1440p", 30, 70), gpuRow("4K", 68, 32)];
+  it("names the CPU limit at the best resolution", () => {
+    const results = [cpuRow("1080p", 22, 78, 150), gpuRow("1440p", 30, 70, 50), gpuRow("4K", 68, 32, 25)];
     const sentences = pairAnalysis(x3d, card, results);
+    expect(sentences[1]).toBe(
+      "1080p is the best resolution for this pair: about 150 fps on average at high to ultra settings, the highest resolution that stays above 60 fps. The CPU is the limit there: about 22% of the AMD Radeon RX 9070 XT's power goes unused, because the CPU can't prepare frames fast enough."
+    );
     expect(sentences.filter((s) => s.includes("1080p"))).toHaveLength(1);
-    expect(sentences).toHaveLength(3);
+    expect(sentences[2]).toMatch(/^At 4K/);
+  });
+
+  it("says when even 1080p falls short of 60 fps, and points to a faster card", () => {
+    const results = [gpuRow("1080p", 60, 40, 52), gpuRow("1440p", 80, 20, 25), gpuRow("4K", 90, 10, 15)];
+    expect(pairAnalysis(x3d, card, results)[1]).toBe(
+      "Even at 1080p this pair averages only about 52 fps at high to ultra settings, so reaching 60 fps takes lower settings, upscaling or a faster graphics card. The graphics card sets the frame rate there."
+    );
   });
 
   it("marks an estimated figure", () => {
