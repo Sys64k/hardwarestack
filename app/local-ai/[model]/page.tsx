@@ -137,6 +137,7 @@ export default async function LocalAiModelPage({ params }: Props) {
             <MeasuredSpeedCard
               modelName={model.name}
               ollamaTag={measuredSpeed.ollamaTag}
+              promptTokens={measuredSpeed.promptTokens}
               rows={speedRows(model, measuredSpeed)}
             />
           )}

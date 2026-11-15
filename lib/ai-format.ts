@@ -26,3 +26,8 @@ export function formatSpeed(tokensPerSecond: number | null): string {
   return tokensPerSecond === null ? "—" : `~${roundSpeed(tokensPerSecond)} tok/s`;
 }
 
+// 0.62 → "0.6 s", 14.3 → "14 s"
+export function formatSeconds(seconds: number): string {
+  // Compare after rounding so 9.96 reads "10 s", not "10.0 s".
+  return `${Math.round(seconds * 10) < 100 ? seconds.toFixed(1) : Math.round(seconds)} s`;
+}

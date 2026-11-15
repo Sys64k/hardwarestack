@@ -19,7 +19,6 @@ export const SPEED_TEST = {
   ollamaVersion: "0.40.11",
   measured: "2026-11",
   runs: 3,
-  promptTokens: 3_300, // about: 3,270–4,709 depending on the model's tokenizer
   generatedTokens: 256,
   desktopVramGb: 2, // used by the desktop session before each model loaded
   scriptUrl: "https://github.com/Sys64k/hardwarestack/blob/main/scripts/bench/ollama-speed.mjs",
@@ -35,6 +34,7 @@ export interface MeasuredSpeed {
   calculatorSlug: string;
   ollamaTag: string;
   quant: QuantId;
+  promptTokens: number; // the test prompt in this model's tokenizer (the report's promptTokens)
   points: SpeedPoint[];
 }
 
@@ -43,6 +43,7 @@ export const MEASURED_SPEEDS: MeasuredSpeed[] = [
     calculatorSlug: "gpt-oss-20b",
     ollamaTag: "gpt-oss:20b",
     quant: "MXFP4",
+    promptTokens: 3_270,
     points: [
       { contextTokens: 8_192, promptTokensPerSecond: 5336, generationTokensPerSecond: 93.3 },
       { contextTokens: 32_768, promptTokensPerSecond: 5183, generationTokensPerSecond: 87.1 },
@@ -53,6 +54,7 @@ export const MEASURED_SPEEDS: MeasuredSpeed[] = [
     calculatorSlug: "qwen3-coder-30b-a3b",
     ollamaTag: "qwen3-coder:30b",
     quant: "Q4_K_M",
+    promptTokens: 3_321,
     points: [
       { contextTokens: 8_192, promptTokensPerSecond: 804, generationTokensPerSecond: 55.7 },
       { contextTokens: 32_768, promptTokensPerSecond: 642, generationTokensPerSecond: 45.9 },
@@ -63,6 +65,7 @@ export const MEASURED_SPEEDS: MeasuredSpeed[] = [
     calculatorSlug: "glm-4-7-flash",
     ollamaTag: "glm-4.7-flash",
     quant: "Q4_K_M",
+    promptTokens: 3_276,
     points: [
       { contextTokens: 8_192, promptTokensPerSecond: 708, generationTokensPerSecond: 50.7 },
       { contextTokens: 32_768, promptTokensPerSecond: 613, generationTokensPerSecond: 45.9 },
@@ -73,6 +76,7 @@ export const MEASURED_SPEEDS: MeasuredSpeed[] = [
     calculatorSlug: "qwen2-5-coder-14b",
     ollamaTag: "qwen2.5-coder:14b",
     quant: "Q4_K_M",
+    promptTokens: 3_342,
     // No 64K point: the model's limit is 32K, so Ollama capped that run at 32K.
     points: [
       { contextTokens: 8_192, promptTokensPerSecond: 1851, generationTokensPerSecond: 41.9 },
@@ -83,6 +87,7 @@ export const MEASURED_SPEEDS: MeasuredSpeed[] = [
     calculatorSlug: "devstral-small-24b",
     ollamaTag: "devstral:24b",
     quant: "Q4_K_M",
+    promptTokens: 4_709,
     points: [
       { contextTokens: 8_192, promptTokensPerSecond: 1139, generationTokensPerSecond: 10.4 },
       { contextTokens: 32_768, promptTokensPerSecond: 836, generationTokensPerSecond: 5.8 },
@@ -102,6 +107,7 @@ export function measuredGenerationSpeed(calculatorSlug: string, contextTokens: n
 }
 
 export interface SpeedRow extends SpeedPoint {
+  firstTokenSeconds: number;               // reading the whole test prompt, before the first word
   estimatedTokensPerSecond: number | null; // this site's estimate for the same machine
 }
 
@@ -109,6 +115,7 @@ export interface SpeedRow extends SpeedPoint {
 export function speedRows(model: LlmModel, measured: MeasuredSpeed): SpeedRow[] {
   return measured.points.map((p) => ({
     ...p,
+    firstTokenSeconds: measured.promptTokens / p.promptTokensPerSecond,
     estimatedTokensPerSecond: checkFit({
       model,
       quant: measured.quant,

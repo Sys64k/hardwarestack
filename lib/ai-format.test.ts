@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatContext, formatGb, formatMeasuredSpeed, formatPercent, formatSpeed } from "./ai-format";
+import { formatContext, formatGb, formatMeasuredSpeed, formatPercent, formatSeconds, formatSpeed } from "./ai-format";
 import { defaultQuant, getLlmModel } from "./llm-models";
 
 describe("formatPercent", () => {
@@ -42,5 +42,14 @@ describe("formatMeasuredSpeed", () => {
 
   it("shows a dash when nothing was measured", () => {
     expect(formatMeasuredSpeed(null)).toBe("—");
+  });
+});
+
+describe("formatSeconds", () => {
+  it("shows one decimal below 10 s and whole seconds above", () => {
+    expect(formatSeconds(0.61)).toBe("0.6 s");
+    expect(formatSeconds(9.94)).toBe("9.9 s");
+    expect(formatSeconds(9.96)).toBe("10 s");
+    expect(formatSeconds(14.3)).toBe("14 s");
   });
 });

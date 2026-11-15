@@ -86,7 +86,7 @@ node scripts/bench/ollama-speed.mjs --host http://<ollama-host>:11434 \
   --models gpt-oss:20b,qwen3-coder:30b --contexts 8192,32768,65536 --runs 3 --out speed.json
 ```
 
-Each model and context gets a warm-up, then `--runs` timed requests (median kept); every request starts differently so Ollama's prompt cache can't skip work. Copy the medians into `lib/measured-llm-speed.ts`; model pages then show them next to the calculator's estimate.
+Each model and context gets a warm-up, then `--runs` timed requests (median kept); every request starts differently so Ollama's prompt cache can't skip work. Copy the medians, and each model's `promptTokens`, into `lib/measured-llm-speed.ts`. Model pages then show them next to the calculator's estimate, with the time to the first word (the prompt size divided by the measured prompt speed).
 
 The estimator's constants in `lib/ai-fit.ts` (desktop VRAM, runtime overhead, bandwidth efficiencies, per-token cost) are fitted to these measurements, and `lib/measured-llm-speed.test.ts` fails if any estimate drifts more than 25% from a measured speed. After adding measurements, refit the constants if that test fails.
 
