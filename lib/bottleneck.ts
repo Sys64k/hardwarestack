@@ -25,6 +25,12 @@ function ramFactor(ram: RamOption): number {
   return RAM_MIN_FACTOR + (1 - RAM_MIN_FACTOR) * ratio;
 }
 
+// Relative gap between two frame rates, as a percentage of the higher one.
+function gapPercent(a: number, b: number): number {
+  const max = Math.max(a, b);
+  return max > 0 ? (Math.abs(a - b) / max) * 100 : 0;
+}
+
 function ramUtilization(ram: RamOption): number {
   const effective = ram.speedMhz * ram.channels;
   // Represents how saturated the RAM bus is relative to a reference system.
@@ -50,10 +56,7 @@ export function calculateBottleneck(
 
   const max = Math.max(effectiveCpuFps, effectiveGpuFps);
   const fps = Math.min(effectiveCpuFps, effectiveGpuFps);
-  const bottleneckPercentage =
-    max > 0
-      ? (Math.abs(effectiveCpuFps - effectiveGpuFps) / max) * 100
-      : 0;
+  const bottleneckPercentage = gapPercent(effectiveCpuFps, effectiveGpuFps);
 
   if (bottleneckPercentage < BALANCED_THRESHOLD || max === 0) {
     return {
@@ -70,10 +73,13 @@ export function calculateBottleneck(
     const cpuUtil = 100;
     const gpuUtil = Math.round((effectiveCpuFps / effectiveGpuFps) * 100);
 
-    // If the RAM penalty is significant enough that removing it would tip the
-    // balance in the CPU's favour, the real culprit is RAM, not the CPU.
+    // If the CPU would keep up with the GPU without the RAM penalty (faster than it, or
+    // within the balanced threshold), the real culprit is RAM, not the CPU.
     const isRamBottleneck =
-      ram !== undefined && rf < 0.95 && rawCpuFps / rf >= effectiveGpuFps;
+      ram !== undefined &&
+      rf < 0.95 &&
+      (rawCpuFps >= effectiveGpuFps ||
+        gapPercent(rawCpuFps, effectiveGpuFps) < BALANCED_THRESHOLD);
 
     return {
       cpuUtilization: cpuUtil,
