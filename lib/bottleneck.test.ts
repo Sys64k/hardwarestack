@@ -14,7 +14,6 @@ const cpu = (overrides: Partial<CpuOption> = {}): CpuOption => ({
   threads: 16,
   boostClockGhz: 5.0,
   singleCoreScore: 2000,
-  retailLinks: [],
   ...overrides,
 });
 
@@ -26,7 +25,6 @@ const gpu = (overrides: Partial<GpuOption> = {}): GpuOption => ({
   vramGb: 8,
   memoryBandwidthGbs: 288,
   rasterScore: 7500,
-  retailLinks: [],
   ...overrides,
 });
 
@@ -52,7 +50,6 @@ const ram = (overrides: Partial<RamOption> = {}): RamOption => ({
   channels: 2,
   latencyCl: 16,
   tier: "HIGH",
-  retailLinks: [],
   ...overrides,
 });
 

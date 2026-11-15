@@ -22,7 +22,6 @@ const cpu = (id: string, o: Partial<CpuOption> = {}): CpuOption => ({
   threads: 12,
   boostClockGhz: 4.6,
   singleCoreScore: 1500,
-  retailLinks: [],
   ...o,
 });
 const gpu = (id: string, rasterScore: number | null): GpuOption => ({
@@ -33,7 +32,6 @@ const gpu = (id: string, rasterScore: number | null): GpuOption => ({
   vramGb: 8,
   memoryBandwidthGbs: 300,
   rasterScore,
-  retailLinks: [],
 });
 const ram = (id: string, type: "DDR4" | "DDR5", speedMhz: number, channels = 2): RamOption => ({
   id,
@@ -44,7 +42,6 @@ const ram = (id: string, type: "DDR4" | "DDR5", speedMhz: number, channels = 2):
   channels,
   latencyCl: null,
   tier: "MID",
-  retailLinks: [],
 });
 
 const current = cpu("5600x");

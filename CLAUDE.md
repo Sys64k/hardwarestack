@@ -47,6 +47,7 @@ npx prisma db push           # Push schema without migration history (dev only)
 ### Monetization
 - Affiliate tag: `NEXT_PUBLIC_AMAZON_AFFILIATE_TAG` env var.
 - Amazon links are tagged amazon.de **search** links built by `buildAmazonSearchUrl` in `lib/shopping-links.ts` (no prices: Amazon only allows prices from its official API). With no tag set, links fall back to Google Shopping.
+- `RetailLink.currentPrice` is scraped from Amazon by the local scraper. Never select it, or anything from `RetailLink`, in app queries: anything a page fetches ends up in the HTML sent to the browser, even if it isn't shown.
 - Affiliate links use `rel="sponsored nofollow"`, buttons carry a visible "Affiliate Partner" label, and the footer shows "As an Amazon Associate I earn from qualifying purchases." Keep all three.
 
 ## Environment variables
