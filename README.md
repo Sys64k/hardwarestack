@@ -69,11 +69,13 @@ See `.env.example` for the full list.
 
 ## Data pipeline
 
-Scraping lives entirely outside this app in `scripts/scraper/` — a standalone Node.js pipeline that:
+Scraping lives entirely outside this app in `scripts/scraper/` — a standalone Node.js pipeline (`npm run scraper:cpus`, `scraper:gpus`, `scraper:all`) that:
 
-1. Fetches hardware specs from retail sources
-2. Uses a local LLM to map retail product names to canonical CPU/GPU entries
-3. Inserts `RetailLink` rows (ASIN → canonical component) into the database
+1. Scrapes the PassMark CPU and GPU benchmark charts with Playwright
+2. Uses the Claude API to keep desktop parts and fill in specs, segment tier and scores
+3. Upserts the `Cpu` and `Gpu` rows
+
+It never scrapes Amazon: Amazon's terms don't allow it, and shop links are plain tagged search links (`lib/shopping-links.ts`).
 
 The app itself never imports Playwright or runs scraping logic (would crash the Fly.io deployment).
 

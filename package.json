@@ -12,7 +12,6 @@
     "db:generate": "prisma generate",
     "scraper:cpus": "npx tsx scripts/scraper/ingest.ts cpus",
     "scraper:gpus": "npx tsx scripts/scraper/ingest.ts gpus",
-    "scraper:amazon": "npx tsx scripts/scraper/ingest.ts amazon",
     "scraper:all": "npx tsx scripts/scraper/ingest.ts all",
     "test": "vitest run"
   },
