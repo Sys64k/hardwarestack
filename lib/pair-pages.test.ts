@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   bestResolution,
+  fixHeading,
+  fixMessage,
   hasScores,
   hasReviewFigures,
   isSitemapPair,
+  pairFixes,
   pairHref,
   pairPath,
   pairResults,
@@ -14,7 +17,6 @@ import {
   relatedCpus,
   relatedGpus,
   sitemapPairs,
-  worstBottleneck,
   type ResolutionResult,
 } from "./pair-pages";
 import type { BottleneckComponent, CpuOption, GpuOption, Resolution } from "@/types/hardware";
@@ -178,23 +180,6 @@ describe("bestResolution", () => {
   });
 });
 
-describe("worstBottleneck", () => {
-  it("returns the largest non-balanced imbalance", () => {
-    expect(worstBottleneck([row("1080p", "CPU", 30), row("1440p", "Balanced", 5), row("4K", "GPU", 45)])).toEqual({
-      resolution: "4K",
-      component: "GPU",
-    });
-    expect(worstBottleneck([row("1080p", "CPU", 50), row("4K", "GPU", 45)])).toEqual({
-      resolution: "1080p",
-      component: "CPU",
-    });
-  });
-
-  it("returns null when every resolution is balanced", () => {
-    expect(worstBottleneck([row("1080p", "Balanced", 2), row("1440p", "Balanced", 8)])).toBeNull();
-  });
-});
-
 describe("pairVerdict", () => {
   it("says well matched when all resolutions are balanced", () => {
     expect(pairVerdict([row("1080p", "Balanced", 2), row("1440p", "Balanced", 3), row("4K", "Balanced", 9)])).toBe(
@@ -253,11 +238,90 @@ describe("relatedGpus / relatedCpus", () => {
 });
 
 describe("pairSummary", () => {
-  it("bundles results, best and worst resolution and the verdict", () => {
+  it("bundles results, best resolution and the verdict", () => {
     const summary = pairSummary(cpu(), gpu());
     expect(summary.results).toHaveLength(3);
     expect(summary.best).toBe(bestResolution(summary.results));
-    expect(summary.worst).toEqual(worstBottleneck(summary.results));
     expect(summary.verdict).toBe(pairVerdict(summary.results));
+  });
+});
+
+describe("pairFixes / fixHeading / fixMessage", () => {
+  // Real names, so the measured gaming figures apply: 9800X3D = 100, RX 6600 = 14.9,
+  // RX 9070 XT = 69.7, RTX 5090 (and the China-only 5090 D) = 100.
+  const x3d = cpu({ id: "x3d", modelName: "AMD Ryzen 7 9800X3D", socket: "AM5" });
+  const rx6600 = gpu({ id: "6600", modelName: "AMD Radeon RX 6600" });
+  const rx9070xt = gpu({ id: "9070xt", modelName: "AMD Radeon RX 9070 XT" });
+  const rtx5090 = gpu({ id: "5090", modelName: "NVIDIA GeForce RTX 5090" });
+  const rtx5090d = gpu({ id: "5090d", modelName: "NVIDIA GeForce RTX 5090 D" });
+
+  it("gives each limited resolution the smallest fix, and says when none removes it", () => {
+    const fixes = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090, rtx5090d]);
+    expect(fixes.map((f) => [f.resolutions, f.component, f.resolves])).toEqual([
+      [["1080p"], "GPU", true],
+      [["1440p"], "GPU", true],
+      [["4K"], "GPU", false],
+    ]);
+    expect(fixes.map((f) => (f.plan?.kind === "GPU" ? f.plan.gpu.id : null))).toEqual(["9070xt", "5090", "5090"]);
+    expect(fixes.map((f) => f.closest)).toEqual([rx9070xt.modelName, rtx5090.modelName, rtx5090.modelName]);
+  });
+
+  it("merges resolutions with the same limit and the same suggested part", () => {
+    const fixes = pairFixes(x3d, rx6600, [x3d], [rx6600, rtx5090]);
+    expect(fixes.map((f) => f.resolutions)).toEqual([["1080p", "1440p"], ["4K"]]);
+    expect(fixHeading(fixes[0])).toBe("1080p and 1440p: the GPU is the limit");
+  });
+
+  it("skips balanced resolutions and has no plan when no faster part exists", () => {
+    const fixes = pairFixes(x3d, rtx5090, [x3d], [rtx5090]);
+    expect(fixes[0]).toEqual({ resolutions: ["1080p"], component: "CPU", plan: null, resolves: false, closest: null });
+    expect(fixes.some((f) => f.resolutions.includes("1440p"))).toBe(false);
+    expect(fixMessage(fixes[0], x3d, rtx5090)).toBe(
+      "The AMD Ryzen 7 9800X3D is already the fastest gaming CPU in our list, so no upgrade removes it. The graphics card has power to spare: a higher resolution puts it to use."
+    );
+  });
+
+  it("returns nothing for a pair that is balanced everywhere", () => {
+    expect(pairFixes(x3d, rx6600, [x3d], [rx6600], [row("1080p", "Balanced", 2)])).toEqual([]);
+  });
+
+  it("introduces a fix, or names the closest part when none removes the bottleneck", () => {
+    const [fix1080, , fix4k] = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090]);
+    expect(fixMessage(fix1080, x3d, rx6600)).toBe("The smallest graphics card upgrade that removes it:");
+    expect(fixMessage(fix4k, x3d, rx6600)).toBe(
+      "No graphics card in our list removes it; even the NVIDIA GeForce RTX 5090 only narrows the gap. At 4K that's normal: upscaling (DLSS, FSR or XeSS) or lower settings are the usual fix."
+    );
+  });
+
+  it("adds the 4K note only to a GPU limit at 4K", () => {
+    const fix = { resolutions: ["1080p" as const], component: "CPU" as const, resolves: false, closest: "AMD Ryzen 7 9800X3D" };
+    const plan = { kind: "CPU" as const, currentSocket: "AM5", options: [{ cpu: x3d, resolves: false, platform: null }] };
+    expect(fixMessage({ ...fix, plan }, x3d, rtx5090)).toBe(
+      "No CPU in our list removes it; even the AMD Ryzen 7 9800X3D only narrows the gap. The graphics card has power to spare: a higher resolution puts it to use."
+    );
+  });
+
+  it("says when only a new platform removes a CPU limit", () => {
+    const am5 = cpu({ id: "am5", socket: "AM5" });
+    const plan = {
+      kind: "CPU" as const,
+      currentSocket: "AM4",
+      options: [
+        { cpu: x3d, resolves: false, platform: null },
+        { cpu: am5, resolves: true, platform: { socket: "AM5", ramTypes: ["DDR5" as const], needsNewRam: null } },
+      ],
+    };
+    const fix = { resolutions: ["1080p" as const], component: "CPU" as const, plan, resolves: true, closest: "am5" };
+    expect(fixMessage(fix, x3d, rtx5090)).toBe("No CPU that fits the current motherboard removes it; a new platform does:");
+    expect(fixMessage({ ...fix, plan: { ...plan, options: [plan.options[1]] } }, x3d, rtx5090)).toBe(
+      "The smallest CPU upgrade that removes it:"
+    );
+  });
+
+  it("notes the CPU's spare power when the fastest GPU is the limit", () => {
+    const fix = { resolutions: ["1440p" as const], component: "GPU" as const, plan: null, resolves: false, closest: null };
+    expect(fixMessage(fix, x3d, rtx5090)).toBe(
+      "The NVIDIA GeForce RTX 5090 is already the fastest gaming graphics card in our list, so no upgrade removes it. The CPU has power to spare here."
+    );
   });
 });

@@ -6,6 +6,10 @@ import {
   planCpuUpgrade,
   planGpuUpgrade,
   planRamUpgrade,
+  isSuggestedGpu,
+  needsNewPlatform,
+  planPartNames,
+  planResolves,
   planUpgrade,
 } from "./upgrade";
 import type { CpuUpgradeOption } from "./upgrade";
@@ -262,7 +266,8 @@ describe("planCpuUpgrade", () => {
 });
 
 describe("planGpuUpgrade", () => {
-  const gpus = [gpu("a", 5000), gpu("b", 8000), gpu("c", 12000), gpu("none", null)];
+  // Current-generation-style names without review figures, so rasterScore sets the order.
+  const gpus = [gpu("GeForce RTX 4001", 5000), gpu("GeForce RTX 4002", 8000), gpu("GeForce RTX 5003", 12000), gpu("GeForce RTX 5004", null)];
 
   it("picks the weakest GPU that removes the bottleneck", () => {
     expect(planGpuUpgrade(gpus[0], gpus, (g) => (g.rasterScore ?? 0) >= 8000)).toEqual({
@@ -278,6 +283,65 @@ describe("planGpuUpgrade", () => {
 
   it("returns null for the strongest GPU", () => {
     expect(planGpuUpgrade(gpus[2], gpus, () => true)).toBeNull();
+  });
+
+  it("never suggests an older-generation card", () => {
+    const old = gpu("GeForce RTX 3090", 20000);
+    expect(planGpuUpgrade(gpus[0], [...gpus, old], () => true)).toEqual({ kind: "GPU", gpu: gpus[1], resolves: true });
+    expect(planGpuUpgrade(gpus[2], [...gpus, old], () => true)).toBeNull();
+  });
+
+  it("never suggests a China-market card", () => {
+    const china = gpu("NVIDIA GeForce RTX 5090 D", 20000);
+    expect(planGpuUpgrade(gpus[2], [...gpus, china], () => true)).toBeNull();
+    expect(planGpuUpgrade(gpus[0], [...gpus, china], () => false)).toEqual({ kind: "GPU", gpu: gpus[2], resolves: false });
+  });
+});
+
+describe("isSuggestedGpu", () => {
+  it("accepts the last two generations from each vendor", () => {
+    for (const name of ["NVIDIA GeForce RTX 4060", "NVIDIA GeForce RTX 5090", "AMD Radeon RX 7600", "AMD Radeon RX 9070 XT", "Intel Arc B580"]) {
+      expect(isSuggestedGpu(name)).toBe(true);
+    }
+  });
+
+  it("rejects older generations and China-market cards", () => {
+    for (const name of ["NVIDIA GeForce RTX 3090 Ti", "NVIDIA GeForce RTX 2080 SUPER", "AMD Radeon RX 6800", "AMD Radeon RX 6750 GRE 12GB", "Intel Arc A770", "NVIDIA GeForce RTX 4090 D", "NVIDIA GeForce RTX 5090 D v2"]) {
+      expect(isSuggestedGpu(name)).toBe(false);
+    }
+  });
+});
+
+describe("planPartNames / needsNewPlatform", () => {
+  const dropIn = { cpu: am4Fast, resolves: false, platform: null };
+  const platform = { cpu: am5, resolves: true, platform: { socket: "AM5", ramTypes: ["DDR5" as const], needsNewRam: null } };
+
+  it("lists the suggested parts in plan order", () => {
+    expect(planPartNames(null)).toEqual([]);
+    expect(planPartNames({ kind: "GPU", gpu: gpu("g", 1), resolves: true })).toEqual(["g"]);
+    expect(planPartNames({ kind: "RAM", ram: ddr4, resolves: true })).toEqual(["ddr4-3200"]);
+    expect(planPartNames({ kind: "CPU", currentSocket: "AM4", options: [dropIn, platform] })).toEqual(["5800x", "7700x"]);
+  });
+
+  it("flags a CPU plan whose drop-in falls short and offers a new platform", () => {
+    expect(needsNewPlatform({ kind: "CPU", currentSocket: "AM4", options: [dropIn, platform] })).toBe(true);
+    expect(needsNewPlatform({ kind: "CPU", currentSocket: "AM4", options: [dropIn] })).toBe(false);
+    expect(needsNewPlatform({ kind: "CPU", currentSocket: "AM4", options: [{ ...dropIn, resolves: true }] })).toBe(false);
+    expect(needsNewPlatform({ kind: "CPU", currentSocket: "AM4", options: [platform] })).toBe(false);
+    expect(needsNewPlatform({ kind: "GPU", gpu: gpu("g", 1), resolves: true })).toBe(false);
+  });
+});
+
+describe("planResolves", () => {
+  it("reads a GPU or RAM plan's flag", () => {
+    expect(planResolves({ kind: "GPU", gpu: gpu("a", 1), resolves: true })).toBe(true);
+    expect(planResolves({ kind: "RAM", ram: ddr4, resolves: false })).toBe(false);
+  });
+
+  it("is true for a CPU plan when any option resolves", () => {
+    const option = (resolves: boolean) => ({ cpu: am5, resolves, platform: null });
+    expect(planResolves({ kind: "CPU", currentSocket: "AM4", options: [option(false), option(true)] })).toBe(true);
+    expect(planResolves({ kind: "CPU", currentSocket: "AM4", options: [option(false)] })).toBe(false);
   });
 });
 

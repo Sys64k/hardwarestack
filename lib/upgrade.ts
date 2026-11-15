@@ -101,6 +101,26 @@ export function planCpuUpgrade(
   return options.length > 0 ? { kind: "CPU", currentSocket: cpu.socket, options } : null;
 }
 
+// GPUs worth suggesting: the last two generations from each vendor, which are the cards
+// still sold new. Older cards stay selectable for anyone who owns one. Add a pattern when
+// a generation launches, and drop the oldest.
+const SUGGESTED_GPU_GENERATIONS: readonly RegExp[] = [
+  /GeForce RTX (40|50)\d\d/, // Ada, Blackwell
+  /Radeon RX (7|9)\d\d\d/,    // RDNA 3, RDNA 4
+  /Arc B\d{3}/,               // Battlemage
+];
+
+// Sold only in China, so never suggested: the shop links go to amazon.de.
+const CHINA_MARKET_GPUS: ReadonlySet<string> = new Set([
+  "NVIDIA GeForce RTX 4090 D",
+  "NVIDIA GeForce RTX 5090 D",
+  "NVIDIA GeForce RTX 5090 D v2",
+]);
+
+export function isSuggestedGpu(modelName: string): boolean {
+  return !CHINA_MARKET_GPUS.has(modelName) && SUGGESTED_GPU_GENERATIONS.some((p) => p.test(modelName));
+}
+
 export function planGpuUpgrade(
   gpu: GpuOption,
   gpus: GpuOption[],
@@ -108,13 +128,33 @@ export function planGpuUpgrade(
 ): UpgradePlan | null {
   const current = gpuGamingScore(gpu);
   const faster = gpus
-    .filter((g) => g.id !== gpu.id)
+    .filter((g) => g.id !== gpu.id && isSuggestedGpu(g.modelName))
     .map((g) => ({ g, score: gpuGamingScore(g) }))
     .filter(({ score }) => score > current)
     .sort((a, b) => a.score - b.score)
     .map(({ g }) => g);
   const picked = pick(faster, resolves);
   return picked ? { kind: "GPU", gpu: picked.item, resolves: picked.resolves } : null;
+}
+
+// Whether the plan's pick (for a CPU, any of its options) removes the bottleneck.
+export function planResolves(plan: UpgradePlan): boolean {
+  return plan.kind === "CPU" ? plan.options.some((o) => o.resolves) : plan.resolves;
+}
+
+// The suggested parts' names, in the plan's order (for a CPU, drop-in first and the
+// strongest last); empty without a plan.
+export function planPartNames(plan: UpgradePlan | null): string[] {
+  if (!plan) return [];
+  if (plan.kind === "CPU") return plan.options.map((o) => o.cpu.modelName);
+  return [plan.kind === "GPU" ? plan.gpu.modelName : plan.ram.modelName];
+}
+
+// The best CPU option is a new platform because the drop-in (listed first) falls short.
+export function needsNewPlatform(plan: UpgradePlan): boolean {
+  if (plan.kind !== "CPU") return false;
+  const [first] = plan.options;
+  return first !== undefined && first.platform === null && !first.resolves && plan.options.length > 1;
 }
 
 // Only kits the current CPU's motherboard can take, when its socket is known.
