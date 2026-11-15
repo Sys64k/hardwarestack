@@ -4,6 +4,7 @@ import {
   MOE_GPU_BANDWIDTH_EFFICIENCY,
   bitsPerWeight,
   checkFit,
+  compareFittingGpus,
   estimateMemory,
   gpuBandwidthEfficiency,
   minVramGb,
@@ -195,5 +196,16 @@ describe("LLM_MODELS", () => {
     expect(m.kvBytesPerToken).toBeGreaterThan(0);
     expect(m.maxContextTokens).toBeGreaterThan(0);
     expect(m.releaseDate).toMatch(/^\d{4}-\d{2}$/);
+  });
+});
+
+describe("compareFittingGpus", () => {
+  it("puts less VRAM first, then the lower gaming tier", () => {
+    const gpus = [
+      { name: "a", vramGb: 16, gamingTier: "MID" as const },
+      { name: "b", vramGb: 12, gamingTier: "HIGH" as const },
+      { name: "c", vramGb: 12, gamingTier: "MID" as const },
+    ];
+    expect([...gpus].sort(compareFittingGpus).map((g) => g.name)).toEqual(["c", "b", "a"]);
   });
 });

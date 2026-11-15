@@ -4,27 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { toSlug } from "@/lib/slug";
+import { TIERS_HIGHEST_FIRST, TIER_COLORS, TIER_LABELS, groupByTier } from "@/lib/tiers";
+import type { TierType } from "@/types/hardware";
 
 interface Gpu {
   id: string;
   modelName: string;
-  tier: string;
+  gamingTier: TierType;
   vramGb: number;
   memoryType: string | null;
   architecture: string | null;
   rasterScore: number | null;
 }
-
-const TIER_ORDER = ["ENTHUSIAST", "ULTRA", "HIGH", "MID", "ENTRY"] as const;
-const TIER_LABELS: Record<string, string> = {
-  ENTRY: "Entry", MID: "Mid-Range", HIGH: "High-End",
-  ULTRA: "Ultra", ENTHUSIAST: "Enthusiast",
-};
-const TIER_COLORS: Record<string, string> = {
-  ENTRY: "bg-slate-100 text-slate-600", MID: "bg-blue-50 text-blue-700",
-  HIGH: "bg-violet-50 text-violet-700", ULTRA: "bg-amber-50 text-amber-700",
-  ENTHUSIAST: "bg-red-50 text-red-700",
-};
 
 export function GpuList({ gpus }: { gpus: Gpu[] }) {
   const [query, setQuery] = useState("");
@@ -32,9 +23,7 @@ export function GpuList({ gpus }: { gpus: Gpu[] }) {
 
   const filtered = q ? gpus.filter(g => g.modelName.toLowerCase().includes(q)) : gpus;
 
-  const groups = TIER_ORDER
-    .filter(t => filtered.some(g => g.tier === t))
-    .map(tier => ({ tier, items: filtered.filter(g => g.tier === tier) }));
+  const groups = groupByTier(filtered, g => g.gamingTier, TIERS_HIGHEST_FIRST);
 
   return (
     <div className="flex flex-col gap-6">

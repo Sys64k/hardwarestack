@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getAgenticTestResult } from "@/lib/agentic-coding-test";
-import { DESKTOP_VRAM_GIB, checkFit, estimateMemory, minVramGb } from "@/lib/ai-fit";
+import { DESKTOP_VRAM_GIB, checkFit, compareFittingGpus, estimateMemory, minVramGb } from "@/lib/ai-fit";
 import { formatContext, formatGb, formatSpeed } from "@/lib/ai-format";
 import { getGpus } from "@/lib/hardware-queries";
 import { DEFAULT_CONTEXT_TOKENS, LLM_MODELS, QUANT_LEVELS, defaultQuant, getLlmModel } from "@/lib/llm-models";
@@ -14,6 +14,7 @@ import { AgenticCodingTestBadge } from "@/components/local-ai/AgenticCodingTest"
 import { MeasuredSpeedCard } from "@/components/local-ai/MeasuredSpeedCard";
 import { getMeasuredSpeed, speedRows } from "@/lib/measured-llm-speed";
 import type { LlmModel } from "@/types/local-ai";
+import { withGpuGamingTier } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,6 @@ interface Props {
 }
 
 const CONTEXT_COLUMNS = [4096, 8192, 32_768, 131_072];
-const TIER_RANK: Record<string, number> = { ENTRY: 0, MID: 1, HIGH: 2, ULTRA: 3, ENTHUSIAST: 4 };
 
 function formatParams(billions: number): string {
   return `${Number(billions.toFixed(1))}B`;
@@ -69,11 +69,11 @@ export default async function LocalAiModelPage({ params }: Props) {
   const memory = estimateMemory(model, quant, DEFAULT_CONTEXT_TOKENS);
   const neededVram = minVramGb(model, quant, DEFAULT_CONTEXT_TOKENS);
 
-  const gpus = await getGpus();
+  const gpus = withGpuGamingTier(await getGpus());
   const fitting = gpus
     .map((gpu) => ({ gpu, fit: checkFit({ model, quant, contextTokens: DEFAULT_CONTEXT_TOKENS, gpu, ram: null }) }))
     .filter((r) => r.fit.status === "gpu")
-    .sort((a, b) => a.gpu.vramGb - b.gpu.vramGb || (TIER_RANK[a.gpu.tier] ?? 0) - (TIER_RANK[b.gpu.tier] ?? 0))
+    .sort((a, b) => compareFittingGpus(a.gpu, b.gpu))
     .slice(0, 10);
 
   const quantsByQuality = [...model.quants].sort(

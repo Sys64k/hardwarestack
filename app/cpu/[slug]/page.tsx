@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/slug";
+import { TIER_COLORS, TIER_LABELS, byGpuGamingScore, cpuGamingTier, gpuGamingTier, tierRepresentatives } from "@/lib/tiers";
+import { isSuggestedGpu } from "@/lib/upgrade";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -25,21 +27,6 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-const TIER_LABELS: Record<string, string> = {
-  ENTRY: "Entry",
-  MID: "Mid-Range",
-  HIGH: "High-End",
-  ULTRA: "Ultra",
-  ENTHUSIAST: "Enthusiast",
-};
-const TIER_COLORS: Record<string, string> = {
-  ENTRY: "bg-slate-100 text-slate-600",
-  MID: "bg-blue-50 text-blue-700",
-  HIGH: "bg-violet-50 text-violet-700",
-  ULTRA: "bg-amber-50 text-amber-700",
-  ENTHUSIAST: "bg-red-50 text-red-700",
-};
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const allCpus = await prisma.cpu.findMany({ select: { modelName: true } });
@@ -57,28 +44,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const TIER_ORDER = ["ENTRY", "MID", "HIGH", "ULTRA", "ENTHUSIAST"] as const;
-
 export default async function CpuDetailPage({ params }: Props) {
   const { slug } = await params;
 
   const [allCpus, allGpus] = await Promise.all([
     prisma.cpu.findMany(),
-    prisma.gpu.findMany({
-      orderBy: { rasterScore: "desc" },
-    }),
+    prisma.gpu.findMany(),
   ]);
 
   const cpu = allCpus.find((c) => toSlug(c.modelName) === slug);
   if (!cpu) notFound();
   const amazonUrl = buildAmazonSearchUrl(cpu.modelName);
 
-  // One representative GPU per tier for pairing table
-  const pairingGpus = TIER_ORDER.flatMap((tier) => {
-    const best = allGpus.find((g) => g.tier === tier);
-    return best ? [best] : [];
-  });
-
+  // The fastest current GPU in each gaming tier, for the pairing table. Only GPUs still sold
+  // new (isSuggestedGpu); CPUs on the GPU page aren't filtered, there's no such list for them.
+  const pairingGpus = tierRepresentatives(
+    byGpuGamingScore(allGpus).filter((g) => isSuggestedGpu(g.modelName)),
+    gpuGamingTier
+  );
+  const tier = cpuGamingTier(cpu);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">
@@ -102,9 +86,9 @@ export default async function CpuDetailPage({ params }: Props) {
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TIER_COLORS[cpu.tier]}`}
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TIER_COLORS[tier]}`}
               >
-                {TIER_LABELS[cpu.tier]}
+                {TIER_LABELS[tier]}
               </span>
               <Badge variant="outline" className="text-xs text-slate-500">
                 {cpu.vendor === "INTEL" ? "Intel" : "AMD"}
@@ -121,7 +105,7 @@ export default async function CpuDetailPage({ params }: Props) {
             <p className="mt-2 text-sm text-slate-500">
               {cpu.cores}-core {cpu.vendor === "INTEL" ? "Intel" : "AMD"}{" "}
               desktop processor with {cpu.boostClockGhz} GHz boost clock.{" "}
-              {TIER_LABELS[cpu.tier]}-tier performance for gaming and productivity.
+              {TIER_LABELS[tier]}-tier gaming performance.
             </p>
           </div>
 

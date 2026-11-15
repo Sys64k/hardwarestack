@@ -5,6 +5,7 @@ import { AgenticCodingTest } from "@/components/local-ai/AgenticCodingTest";
 import { LocalAiMethodology } from "@/components/local-ai/LocalAiMethodology";
 import { getGpus } from "@/lib/hardware-queries";
 import { ToolTabs } from "@/components/ToolTabs";
+import { withGpuGamingTier } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +21,9 @@ interface LocalAiPageProps {
 
 export default async function LocalAiPage({ searchParams }: LocalAiPageProps) {
   const [allGpus, { gpuId, model }] = await Promise.all([getGpus(), searchParams]);
-  const gpus: LocalAiGpu[] = allGpus.map(({ id, modelName, tier, vramGb, memoryBandwidthGbs }) => ({
-    id,
-    modelName,
-    tier,
-    vramGb,
-    memoryBandwidthGbs,
-  }));
+  const gpus: LocalAiGpu[] = withGpuGamingTier(allGpus).map(
+    ({ id, modelName, gamingTier, vramGb, memoryBandwidthGbs }) => ({ id, modelName, gamingTier, vramGb, memoryBandwidthGbs })
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">

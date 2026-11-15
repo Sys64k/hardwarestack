@@ -2,26 +2,19 @@ import { RESOLUTIONS, calculateBottleneck } from "./bottleneck";
 import { cpuGamingScore, gamingIndex, measuredGamingIndex } from "./cpu-gaming-index";
 import { gpuGamingScore, gpuIndex, measuredGpuIndex } from "./gpu-gaming-index";
 import { toSlug } from "./slug";
+import { TIER_RANK } from "./tiers";
 import { needsNewPlatform, planPartNames, planResolves, planUpgrade, type UpgradePlan } from "./upgrade";
 import type {
   BottleneckResult,
   CpuOption,
   GpuOption,
   Resolution,
-  TierType,
 } from "@/types/hardware";
-
-const TIER_RANK: Record<TierType, number> = {
-  ENTRY: 0,
-  MID: 1,
-  HIGH: 2,
-  ULTRA: 3,
-  ENTHUSIAST: 4,
-};
 
 // Every scored pair has a page, but only some go in the sitemap and "related" links,
 // so crawlers spend their budget on the best pages (see isSitemapPair).
-// Pairs further apart in tier than this are builds few people buy.
+// Pairs further apart in tier than this are builds few people buy. This uses the stored
+// tier (the product segment, close to price class), not the gaming tier pages display.
 const MAX_SITEMAP_TIER_GAP = 1;
 
 const SLUG_SEPARATOR = "-vs-";
