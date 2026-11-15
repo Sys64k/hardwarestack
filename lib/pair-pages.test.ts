@@ -252,48 +252,56 @@ describe("pairSummary", () => {
 });
 
 describe("pairFixes / fixHeading / fixMessage", () => {
-  // Real names, so the measured gaming figures apply: 9800X3D = 100, RX 6600 = 14.9,
-  // RX 9070 XT = 69.7, RTX 5090 (and the China-only 5090 D) = 100.
+  // Real names, so the review figures apply. Frame rates the model gets from them:
+  // CPUs: 9800X3D ~204 fps, Ryzen 5 5600 ~113 fps.
+  // GPUs (1080p / 1440p / 4K): RX 6600 52 / 25 / 15, RX 9070 XT 167 / 117 / 66,
+  // RTX 4090 205 / 143 / 89, RTX 5090 239 / 167 / 111 (the China-only 5090 D the same).
   const x3d = cpu({ id: "x3d", modelName: "AMD Ryzen 7 9800X3D", socket: "AM5" });
+  const r5600 = cpu({ id: "5600", modelName: "AMD Ryzen 5 5600", socket: "AM4" });
   const rx6600 = gpu({ id: "6600", modelName: "AMD Radeon RX 6600" });
   const rx9070xt = gpu({ id: "9070xt", modelName: "AMD Radeon RX 9070 XT" });
+  const rtx4090 = gpu({ id: "4090", modelName: "NVIDIA GeForce RTX 4090" });
   const rtx5090 = gpu({ id: "5090", modelName: "NVIDIA GeForce RTX 5090" });
   const rtx5090d = gpu({ id: "5090d", modelName: "NVIDIA GeForce RTX 5090 D" });
 
-  it("gives each limited resolution the smallest fix, and says when none removes it", () => {
-    const fixes = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090, rtx5090d]);
-    expect(fixes.map((f) => [f.resolutions, f.component, f.resolves])).toEqual([
-      [["1080p"], "GPU", true],
-      [["1440p"], "GPU", true],
-      [["4K"], "GPU", false],
+  it("gives each limited resolution the smallest fix, merging resolutions that share one", () => {
+    const fixes = pairFixes(r5600, rx6600, [r5600], [rx6600, rx9070xt, rtx5090, rtx5090d]);
+    expect(fixes.map((f) => [f.resolutions, f.component, f.resolves, f.closest])).toEqual([
+      [["1080p", "1440p"], "GPU", true, rx9070xt.modelName],
+      [["4K"], "GPU", true, rtx5090.modelName],
     ]);
-    expect(fixes.map((f) => (f.plan?.kind === "GPU" ? f.plan.gpu.id : null))).toEqual(["9070xt", "5090", "5090"]);
-    expect(fixes.map((f) => f.closest)).toEqual([rx9070xt.modelName, rtx5090.modelName, rtx5090.modelName]);
-  });
-
-  it("merges resolutions with the same limit and the same suggested part", () => {
-    const fixes = pairFixes(x3d, rx6600, [x3d], [rx6600, rtx5090]);
-    expect(fixes.map((f) => f.resolutions)).toEqual([["1080p", "1440p"], ["4K"]]);
     expect(fixHeading(fixes[0])).toBe("1080p and 1440p: the GPU is the limit");
   });
 
-  it("skips balanced resolutions and has no plan when no faster part exists", () => {
+  it("says when no part removes the bottleneck, naming the closest", () => {
+    const fixes = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090]);
+    expect(fixes.map((f) => [f.resolutions, f.resolves, f.closest])).toEqual([
+      [["1080p"], true, rtx5090.modelName],
+      [["1440p", "4K"], false, rtx5090.modelName],
+    ]);
+  });
+
+  it("has no plan when no faster part exists", () => {
     const fixes = pairFixes(x3d, rtx5090, [x3d], [rtx5090]);
-    expect(fixes[0]).toEqual({ resolutions: ["1080p"], component: "CPU", plan: null, resolves: false, closest: null });
-    expect(fixes.some((f) => f.resolutions.includes("1440p"))).toBe(false);
+    expect(fixes).toEqual([
+      { resolutions: ["1080p"], component: "CPU", plan: null, resolves: false, closest: null },
+      { resolutions: ["1440p", "4K"], component: "GPU", plan: null, resolves: false, closest: null },
+    ]);
     expect(fixMessage(fixes[0], x3d, rtx5090)).toBe(
       "The AMD Ryzen 7 9800X3D is already the fastest gaming CPU in our list, so no upgrade removes it. The graphics card has power to spare: a higher resolution puts it to use."
     );
   });
 
-  it("returns nothing for a pair that is balanced everywhere", () => {
+  it("skips balanced resolutions", () => {
+    const fixes = pairFixes(x3d, rtx4090, [x3d], [rtx4090]);
+    expect(fixes.some((f) => f.resolutions.includes("1080p"))).toBe(false);
     expect(pairFixes(x3d, rx6600, [x3d], [rx6600], [row("1080p", "Balanced", 2)])).toEqual([]);
   });
 
   it("introduces a fix, or names the closest part when none removes the bottleneck", () => {
-    const [fix1080, , fix4k] = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090]);
+    const [fix1080, fixHigh] = pairFixes(x3d, rx6600, [x3d], [rx6600, rx9070xt, rtx5090]);
     expect(fixMessage(fix1080, x3d, rx6600)).toBe("The smallest graphics card upgrade that removes it:");
-    expect(fixMessage(fix4k, x3d, rx6600)).toBe(
+    expect(fixMessage(fixHigh, x3d, rx6600)).toBe(
       "No graphics card in our list removes it; even the NVIDIA GeForce RTX 5090 only narrows the gap. At 4K that's normal: upscaling (DLSS, FSR or XeSS) or lower settings are the usual fix."
     );
   });

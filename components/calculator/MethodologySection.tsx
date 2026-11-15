@@ -1,10 +1,16 @@
 import {
+  CPU_FPS_PER_INDEX_POINT,
   CPU_GAMING_SOURCES,
-  GAMING_INDEX_TO_SCORE,
   MEASURED_CPU_COUNT,
   TOMS_HARDWARE,
 } from "@/lib/cpu-gaming-index";
-import { GPU_GAMING_INDEX_TO_SCORE, MEASURED_GPU_COUNT, TOMS_GPU_HIERARCHY } from "@/lib/gpu-gaming-index";
+import {
+  GPU_1080P_FACTOR,
+  GPU_4K_FACTOR,
+  MEASURED_GPU_COUNT,
+  RTX_5090_FPS_1440P,
+  TOMS_GPU_HIERARCHY,
+} from "@/lib/gpu-gaming-index";
 import { SourceLink } from "@/components/detail/SourceLink";
 
 export function MethodologySection() {
@@ -25,20 +31,22 @@ export function MethodologySection() {
               1
             </span>
             <h3 className="text-sm font-semibold text-slate-800">
-              CPU gaming score
+              CPU frame rate
             </h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
             Each CPU&apos;s 1080p gaming performance as a percentage of the fastest gaming CPU,
             from published reviews tested with an {TOMS_HARDWARE.gpu}. {MEASURED_CPU_COUNT} CPUs are
             measured; the rest are estimated from their single-thread score, with adjustments for
-            X3D cache and the older AM4 platform, fitted to the measured ones.
+            X3D cache and the older AM4 platform, fitted to the measured ones. The index converts to
+            the frame rate the CPU can deliver.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
-            score = gamingIndex × {GAMING_INDEX_TO_SCORE}
+            cpuFps = gamingIndex × {CPU_FPS_PER_INDEX_POINT}
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
-            The multiplier puts the CPU index on the same scale as the GPU score.
+            Calibrated so the Ryzen 7 9800X3D allows about 204 fps: what the RTX 5090 reached on it
+            at 1080p in the GPU review.
           </p>
         </div>
 
@@ -48,23 +56,26 @@ export function MethodologySection() {
               2
             </span>
             <h3 className="text-sm font-semibold text-slate-800">
-              GPU score &amp; resolution scaling
+              GPU frame rate by resolution
             </h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
             Each GPU&apos;s {TOMS_GPU_HIERARCHY.resolution} gaming performance as a percentage of the
-            fastest gaming GPU, from a published review. {MEASURED_GPU_COUNT} GPUs are measured; the rest
-            are estimated from their PassMark score, fitted to the measured ones. The score is divided
-            by a resolution multiplier: higher resolutions demand proportionally more from the GPU,
-            shifting the bottleneck toward the graphics card.
+            fastest gaming GPU, from a published review that also gives frame rates at 1080p and 4K.{" "}
+            {MEASURED_GPU_COUNT} GPUs are measured; the rest are estimated from their PassMark score,
+            fitted to the measured ones. Measured GPUs use their own 4K result, which catches 8 GB
+            cards running out of memory.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
-            gpuScore = gamingIndex × {GPU_GAMING_INDEX_TO_SCORE}
+            gpuFps(1440p) = gamingIndex × {RTX_5090_FPS_1440P / 100}
             <br />
-            effectiveGPU = gpuScore / resolutionRatio
+            gpuFps(1080p) = max(measured, gpuFps(1440p) × {GPU_1080P_FACTOR})
+            <br />
+            gpuFps(4K) = measured, else gpuFps(1440p) × {GPU_4K_FACTOR}
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
-            Resolution ratios: 1080p = 1.0 · 1440p = 1.78 · 4K = 4.0
+            The factors are the review&apos;s median frame-rate change between resolutions, far smaller
+            than the change in pixel count.
           </p>
         </div>
 
@@ -80,12 +91,12 @@ export function MethodologySection() {
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
             Slow or single-channel memory starves the CPU. The reference point
             is DDR4-3600 dual-channel — no penalty, no bonus. Below that,
-            effective CPU score is reduced by up to 25%.
+            the CPU&apos;s frame rate is reduced by up to 25%.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
             factor = 0.75 + 0.25 × min(1, bandwidth / 7200)
             <br />
-            effectiveCPU = cpuScore × factor
+            effectiveCPU = cpuFps × factor
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
             Bandwidth = speedMHz × channels. Reference: 3600 × 2 = 7200
@@ -102,16 +113,16 @@ export function MethodologySection() {
             </h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-3">
-            The imbalance percentage is the relative gap between the two scores.
-            Below 10% the system is considered well-matched. The weaker
-            component is identified as the bottleneck.
+            The lower of the two frame rates sets the pace. The imbalance is the
+            relative gap between them; below 10% the system is considered
+            well-matched.
           </p>
           <code className="block rounded-md bg-slate-900 px-3 py-2.5 text-[11px] text-slate-200 leading-relaxed font-mono">
-            gap = |cpuScore − gpuScore| / max(both) × 100
+            gap = |cpuFps − gpuFps| / max(both) × 100
           </code>
           <p className="mt-2 text-[11px] text-slate-400">
-            &lt; 10% → Balanced · CPU score &lt; GPU → CPU bottleneck · GPU
-            score &lt; CPU → GPU bottleneck
+            &lt; 10% → Balanced · CPU fps &lt; GPU → CPU bottleneck · GPU
+            fps &lt; CPU → GPU bottleneck
           </p>
         </div>
       </div>
