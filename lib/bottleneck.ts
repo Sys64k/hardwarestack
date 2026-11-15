@@ -5,16 +5,10 @@ import type {
   RamOption,
   Resolution,
 } from "@/types/hardware";
-import { cpuGamingScore } from "./cpu-gaming-index";
-import { gpuGamingScore } from "./gpu-gaming-index";
+import { cpuFps } from "./cpu-gaming-index";
+import { gpuFps } from "./gpu-gaming-index";
 
 export const RESOLUTIONS: Resolution[] = ["1080p", "1440p", "4K"];
-
-const RESOLUTION_PIXEL_RATIO: Record<Resolution, number> = {
-  "1080p": 1.0,
-  "1440p": 1.78,
-  "4K": 4.0,
-};
 
 // DDR4-3600 dual channel is the "neutral" baseline — no penalty, no bonus.
 const RAM_REFERENCE_SCORE = 7200; // 3600 MHz × 2 channels
@@ -44,19 +38,20 @@ export function calculateBottleneck(
   resolution: Resolution,
   ram?: RamOption
 ): BottleneckResult {
-  const rawCpuScore = cpuGamingScore(cpu);
-  const gpuBaseScore = gpuGamingScore(gpu);
+  // Both sides in frames per second: what the CPU allows, and what the GPU renders at this
+  // resolution. The lower one sets the frame rate.
+  const rawCpuFps = cpuFps(cpu);
 
   const rf = ram ? ramFactor(ram) : 1.0;
   const ramUtil = ram ? ramUtilization(ram) : 80;
 
-  const effectiveCpuScore = rawCpuScore * rf;
-  const effectiveGpuScore = gpuBaseScore / RESOLUTION_PIXEL_RATIO[resolution];
+  const effectiveCpuFps = rawCpuFps * rf;
+  const effectiveGpuFps = gpuFps(gpu, resolution);
 
-  const max = Math.max(effectiveCpuScore, effectiveGpuScore);
+  const max = Math.max(effectiveCpuFps, effectiveGpuFps);
   const bottleneckPercentage =
     max > 0
-      ? (Math.abs(effectiveCpuScore - effectiveGpuScore) / max) * 100
+      ? (Math.abs(effectiveCpuFps - effectiveGpuFps) / max) * 100
       : 0;
 
   if (bottleneckPercentage < BALANCED_THRESHOLD || max === 0) {
@@ -69,14 +64,14 @@ export function calculateBottleneck(
     };
   }
 
-  if (effectiveCpuScore < effectiveGpuScore) {
+  if (effectiveCpuFps < effectiveGpuFps) {
     const cpuUtil = 100;
-    const gpuUtil = Math.round((effectiveCpuScore / effectiveGpuScore) * 100);
+    const gpuUtil = Math.round((effectiveCpuFps / effectiveGpuFps) * 100);
 
     // If the RAM penalty is significant enough that removing it would tip the
     // balance in the CPU's favour, the real culprit is RAM, not the CPU.
     const isRamBottleneck =
-      ram !== undefined && rf < 0.95 && rawCpuScore / rf >= effectiveGpuScore;
+      ram !== undefined && rf < 0.95 && rawCpuFps / rf >= effectiveGpuFps;
 
     return {
       cpuUtilization: cpuUtil,
@@ -88,7 +83,7 @@ export function calculateBottleneck(
   }
 
   return {
-    cpuUtilization: Math.round((effectiveGpuScore / effectiveCpuScore) * 100),
+    cpuUtilization: Math.round((effectiveGpuFps / effectiveCpuFps) * 100),
     gpuUtilization: 100,
     ramUtilization: ramUtil,
     bottleneckComponent: "GPU",

@@ -146,15 +146,19 @@ export function gamingIndex(cpu: CpuOption): number | null {
   return measuredGamingIndex(cpu.modelName) ?? estimatedGamingIndex(cpu);
 }
 
-// Converts the gaming index onto the score scale shared with the GPU score
-// (GPU_GAMING_INDEX_TO_SCORE in lib/gpu-gaming-index.ts; the scale was originally
-// PassMark-derived). Set to the median ratio of the old single-core × core-count score to
-// the new index across production CPUs, so the overall CPU-vs-GPU balance stays where it
-// was while the order between CPUs follows measured figures.
-export const GAMING_INDEX_TO_SCORE = 150;
+// The frame rate a CPU allows, on the GPU side's fps scale (gpuFps in lib/gpu-gaming-index.ts).
+// The Ryzen 7 9800X3D (index 97) is the GPU review's test CPU, and the RTX 5090 averaged
+// 203.8 fps on it at 1080p, flattening against the CPU where cards it doesn't hold back gain
+// 1.43× over 1440p. So the 9800X3D allows about 204 fps, which is 2.1 fps per index point.
+// Tom's gaming index is measured at 1080p with an RTX 5090 too, so fps scales with it.
+export const CPU_FPS_PER_INDEX_POINT = 2.1;
 
-// The CPU score the bottleneck model and upgrade ranking use. 0 when the CPU has neither
-// a measured figure nor a single-core score.
+export function cpuFps(cpu: CpuOption): number {
+  return (gamingIndex(cpu) ?? 0) * CPU_FPS_PER_INDEX_POINT;
+}
+
+// Ranks CPUs for upgrades and related links. Deliberately just the gaming index (0 without
+// one); the bottleneck model uses cpuFps.
 export function cpuGamingScore(cpu: CpuOption): number {
-  return (gamingIndex(cpu) ?? 0) * GAMING_INDEX_TO_SCORE;
+  return gamingIndex(cpu) ?? 0;
 }

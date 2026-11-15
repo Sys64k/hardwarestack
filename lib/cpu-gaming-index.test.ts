@@ -4,7 +4,8 @@ import {
   CPU_GAMING_INDEX,
   estimatedGamingIndex,
   CPU_GAMING_SOURCES,
-  GAMING_INDEX_TO_SCORE,
+  CPU_FPS_PER_INDEX_POINT,
+  cpuFps,
   cpuGamingScore,
   TOMS_HARDWARE,
   gamingIndex,
@@ -111,15 +112,27 @@ describe("gamingIndexSource", () => {
   });
 });
 
+describe("cpuFps", () => {
+  it("puts the 9800X3D at the frame rate the RTX 5090 reached on it at 1080p", () => {
+    const x3d = cpu({ modelName: "AMD Ryzen 7 9800X3D" });
+    expect(cpuFps(x3d)).toBeCloseTo(97 * CPU_FPS_PER_INDEX_POINT, 5);
+    expect(cpuFps(x3d)).toBeGreaterThanOrEqual(203.8 * 0.995);
+  });
+
+  it("is 0 without a measured figure or single-core score", () => {
+    expect(cpuFps(cpu({ singleCoreScore: null }))).toBe(0);
+  });
+});
+
 describe("cpuGamingScore", () => {
   it("uses the measured figure for a reviewed CPU", () => {
     const measured = cpu({ modelName: "AMD Ryzen 7 9800X3D", singleCoreScore: 1 });
-    expect(cpuGamingScore(measured)).toBe(97 * GAMING_INDEX_TO_SCORE);
+    expect(cpuGamingScore(measured)).toBe(97);
   });
 
   it("uses the estimate for an unreviewed CPU", () => {
     const c = cpu();
-    expect(cpuGamingScore(c)).toBe((estimatedGamingIndex(c) ?? 0) * GAMING_INDEX_TO_SCORE);
+    expect(cpuGamingScore(c)).toBe(estimatedGamingIndex(c) ?? 0);
   });
 
   it("is 0 without a measured figure or single-core score", () => {
