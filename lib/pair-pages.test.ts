@@ -29,7 +29,6 @@ const cpu = (overrides: Partial<CpuOption> = {}): CpuOption => ({
   threads: 12,
   boostClockGhz: 4.4,
   singleCoreScore: 3300,
-  retailLinks: [],
   ...overrides,
 });
 
@@ -41,7 +40,6 @@ const gpu = (overrides: Partial<GpuOption> = {}): GpuOption => ({
   vramGb: 12,
   memoryBandwidthGbs: 504,
   rasterScore: 26000,
-  retailLinks: [],
   ...overrides,
 });
 

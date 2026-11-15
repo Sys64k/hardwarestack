@@ -64,20 +64,8 @@ export default async function GpuDetailPage({ params }: Props) {
   const { slug } = await params;
 
   const [allGpus, allCpus] = await Promise.all([
-    prisma.gpu.findMany({
-      include: {
-        retailLinks: {
-          select: {
-            asin: true,
-            retailTitle: true,
-            currentPrice: true,
-            currency: true,
-          },
-        },
-      },
-    }),
+    prisma.gpu.findMany(),
     prisma.cpu.findMany({
-      include: { retailLinks: { select: { asin: true } } },
       orderBy: { singleCoreScore: "desc" },
     }),
   ]);

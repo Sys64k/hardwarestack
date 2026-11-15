@@ -23,7 +23,6 @@ const cpu = (o: Partial<CpuOption> = {}): CpuOption => ({
   threads: 16,
   boostClockGhz: 5,
   singleCoreScore: 2000,
-  retailLinks: [],
   ...o,
 });
 

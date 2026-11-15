@@ -20,7 +20,6 @@ const gpu = (o: Partial<GpuOption> = {}): GpuOption => ({
   vramGb: 8,
   memoryBandwidthGbs: 288,
   rasterScore: 12000,
-  retailLinks: [],
   ...o,
 });
 

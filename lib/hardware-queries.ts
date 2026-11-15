@@ -6,11 +6,6 @@ export const getCpus = unstable_cache(
   async (): Promise<CpuOption[]> => {
     const rows = await prisma.cpu.findMany({
       orderBy: [{ tier: "asc" }, { singleCoreScore: "desc" }],
-      include: {
-        retailLinks: {
-          select: { asin: true, retailTitle: true, currentPrice: true, currency: true },
-        },
-      },
     });
     return rows as CpuOption[];
   },
@@ -22,11 +17,6 @@ export const getGpus = unstable_cache(
   async (): Promise<GpuOption[]> => {
     const rows = await prisma.gpu.findMany({
       orderBy: [{ tier: "asc" }, { rasterScore: "desc" }],
-      include: {
-        retailLinks: {
-          select: { asin: true, retailTitle: true, currentPrice: true, currency: true },
-        },
-      },
     });
     return rows as GpuOption[];
   },
@@ -38,11 +28,6 @@ export const getRams = unstable_cache(
   async (): Promise<RamOption[]> => {
     const rows = await prisma.ram.findMany({
       orderBy: [{ type: "asc" }, { speedMhz: "asc" }],
-      include: {
-        retailLinks: {
-          select: { asin: true, retailTitle: true, currentPrice: true, currency: true },
-        },
-      },
     });
     return rows as RamOption[];
   },
