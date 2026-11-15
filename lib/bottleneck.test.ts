@@ -116,6 +116,15 @@ describe("calculateBottleneck", () => {
     expect(matched.bottleneckPercentage).toBeCloseTo(sameScore.bottleneckPercentage, 5);
   });
 
+  it("reports the lower of the CPU's and GPU's frame rates, after the RAM penalty", () => {
+    const slowGpu = gpuAtFps(cpuFps(cpu()) / 2);
+    expect(calculateBottleneck(cpu(), slowGpu, "1080p").fps).toBeCloseTo(cpuFps(cpu()) / 2, 0);
+    const fastGpu = gpuAtFps(cpuFps(cpu()) * 2);
+    expect(calculateBottleneck(cpu(), fastGpu, "1080p").fps).toBeCloseTo(cpuFps(cpu()), 5);
+    const slowRam = ram({ speedMhz: 2133, channels: 1 });
+    expect(calculateBottleneck(cpu(), fastGpu, "1080p", slowRam).fps).toBeLessThan(cpuFps(cpu()));
+  });
+
   it("bottleneckPercentage is 0 when scores are equal", () => {
     const result = calculateBottleneck(cpu(), gpuAtFps(cpuFps(cpu())), "1080p");
     expect(result.bottleneckPercentage).toBeLessThan(1);

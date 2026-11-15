@@ -47,4 +47,5 @@ export interface BottleneckResult {
   ramUtilization: number;
   bottleneckComponent: BottleneckComponent;
   bottleneckPercentage: number;
+  fps: number; // estimated average frame rate (unrounded): the lower of what the CPU and GPU allow
 }
