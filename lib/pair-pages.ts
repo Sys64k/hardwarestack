@@ -1,6 +1,6 @@
 import { RESOLUTIONS, calculateBottleneck } from "./bottleneck";
-import { measuredGamingIndex } from "./cpu-gaming-index";
-import { gpuGamingScore, measuredGpuIndex } from "./gpu-gaming-index";
+import { cpuGamingScore, gamingIndex, measuredGamingIndex } from "./cpu-gaming-index";
+import { gpuGamingScore, gpuIndex, measuredGpuIndex } from "./gpu-gaming-index";
 import { toSlug } from "./slug";
 import { needsNewPlatform, planPartNames, planResolves, planUpgrade, type UpgradePlan } from "./upgrade";
 import type {
@@ -140,37 +140,31 @@ export function pairVerdict(results: ResolutionResult[]): string {
   return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
 }
 
-// Closest-performing alternatives that are themselves sitemap pairs,
-// so related links only ever point at pages we want indexed.
-export function relatedGpus(
-  cpu: CpuOption,
-  gpu: GpuOption,
-  gpus: GpuOption[],
-  limit = 6
-): GpuOption[] {
-  const target = gpuGamingScore(gpu);
-  return gpus
-    .filter((g) => g.id !== gpu.id && isSitemapPair(cpu, g))
-    .map((g) => ({ g, distance: Math.abs(gpuGamingScore(g) - target) }))
-    .sort((a, b) => a.distance - b.distance)
+// The items closest to `self` in gaming score that pass `keep`, nearest first.
+function closestBy<T extends { id: string }>(
+  items: T[],
+  self: T,
+  score: (item: T) => number,
+  keep: (item: T) => boolean,
+  limit: number
+): T[] {
+  const target = score(self);
+  return items
+    .filter((item) => item.id !== self.id && keep(item))
+    .map((item) => ({ item, distance: Math.abs(score(item) - target) }))
+    .sort((x, y) => x.distance - y.distance)
     .slice(0, limit)
-    .map(({ g }) => g);
+    .map(({ item }) => item);
 }
 
-export function relatedCpus(
-  cpu: CpuOption,
-  gpu: GpuOption,
-  cpus: CpuOption[],
-  limit = 6
-): CpuOption[] {
-  const target = cpu.singleCoreScore ?? 0;
-  return cpus
-    .filter((c) => c.id !== cpu.id && isSitemapPair(c, gpu))
-    .sort(
-      (a, b) =>
-        Math.abs((a.singleCoreScore ?? 0) - target) - Math.abs((b.singleCoreScore ?? 0) - target)
-    )
-    .slice(0, limit);
+// Closest-performing alternatives that are themselves sitemap pairs,
+// so related links only ever point at pages we want indexed.
+export function relatedGpus(cpu: CpuOption, gpu: GpuOption, gpus: GpuOption[], limit = 6): GpuOption[] {
+  return closestBy(gpus, gpu, gpuGamingScore, (g) => isSitemapPair(cpu, g), limit);
+}
+
+export function relatedCpus(cpu: CpuOption, gpu: GpuOption, cpus: CpuOption[], limit = 6): CpuOption[] {
+  return closestBy(cpus, cpu, cpuGamingScore, (c) => isSitemapPair(c, gpu), limit);
 }
 
 // What removes the bottleneck at the resolutions where one part is the limit. Resolutions
@@ -253,6 +247,60 @@ export function fixMessage(fix: PairFix, cpu: CpuOption, gpu: GpuOption): string
       return fix.resolutions.includes("4K") ? `${gap} ${UPSCALING_4K_NOTE}` : gap;
     }
   }
+}
+
+// Where a part ranks on its gaming index (100 = the fastest in our list), flagged when the
+// figure is an estimate rather than from a review.
+function standing(index: number | null, measured: number | null): string {
+  return `${Math.round(index ?? 0)}%${measured === null ? " (estimated)" : ""}`;
+}
+
+// The limited row with the largest imbalance for this part (first wins on ties), if any.
+function worstFor(results: ResolutionResult[], component: "CPU" | "GPU"): ResolutionResult | undefined {
+  const limited = results.filter((r) => r.result.bottleneckComponent === component);
+  if (limited.length === 0) return undefined;
+  return limited.reduce((worst, r) => (r.result.bottleneckPercentage > worst.result.bottleneckPercentage ? r : worst));
+}
+
+// A clause on how much of the other part's power goes unused where this row's part is the limit.
+function unusedClause(row: ResolutionResult, cpu: CpuOption, gpu: GpuOption): string {
+  return row.result.bottleneckComponent === "CPU"
+    ? `about ${100 - row.result.gpuUtilization}% of the ${gpu.modelName}'s power goes unused, because the CPU can't prepare frames fast enough`
+    : `the graphics card sets the frame rate, and about ${100 - row.result.cpuUtilization}% of the ${cpu.modelName}'s power goes unused`;
+}
+
+// A few sentences on this pair, from its gaming figures and bottleneck results: where each
+// part ranks, why the best resolution is best, and how much of the faster part goes unused
+// where the other one is the limit (once per part, at its worst resolution). `best` defaults
+// to bestResolution(results); the page passes the one pairSummary already has.
+export function pairAnalysis(
+  cpu: CpuOption,
+  gpu: GpuOption,
+  results: ResolutionResult[],
+  best: Resolution = bestResolution(results)
+): string[] {
+  const cpuStanding = standing(gamingIndex(cpu), measuredGamingIndex(cpu.modelName));
+  const gpuStanding = standing(gpuIndex(gpu), measuredGpuIndex(gpu.modelName));
+  // Separate rankings, not one scale: a CPU at 80% and a GPU at 60% can still be balanced.
+  const sentences = [
+    `Among CPUs, the ${cpu.modelName} games at ${cpuStanding} of the speed of the fastest in our list. Among graphics cards, the ${gpu.modelName} reaches ${gpuStanding} of the fastest.`,
+  ];
+
+  const bestRow = results.find((r) => r.resolution === best);
+  if (bestRow) {
+    const gap = Math.round(bestRow.result.bottleneckPercentage);
+    sentences.push(
+      bestRow.result.bottleneckComponent === "Balanced"
+        ? `${best} suits this pair best: the two are within ${gap}% of each other there, so neither waits on the other.`
+        : `${best} is the closest match for this pair, though the ${bestRow.result.bottleneckComponent} is still the limit there: ${unusedClause(bestRow, cpu, gpu)}.`
+    );
+  }
+
+  for (const component of ["CPU", "GPU"] as const) {
+    const worst = worstFor(results, component);
+    if (worst && worst.resolution !== best) sentences.push(`At ${worst.resolution}, ${unusedClause(worst, cpu, gpu)}.`);
+  }
+  return sentences;
 }
 
 export interface PairSummary {
