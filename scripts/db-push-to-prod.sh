@@ -72,7 +72,7 @@ PROXY_PID=$!
 wait_for_port "$PROXY_PORT"
 
 echo "==> Truncating production tables..."
-psql "$PROD_URL" -c 'TRUNCATE "RetailLink", "Cpu", "Gpu", "Ram" CASCADE;'
+psql "$PROD_URL" -c 'TRUNCATE "Cpu", "Gpu", "Ram" CASCADE;'
 
 echo "==> Restoring dump..."
 psql "$PROD_URL" -f "$DUMP_FILE"
