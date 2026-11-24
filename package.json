@@ -59,6 +59,9 @@
     },
     "@ts-morph/common": {
       "minimatch": "^11.0.8"
+    },
+    "@prisma/config": {
+      "effect": "3.22.4"
     }
   }
 }
