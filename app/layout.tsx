@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
+import { CONTACT_EMAIL } from "@/lib/site";
 import { ShopClickTracker } from "@/components/monetization/ShopClickTracker";
 
 const geist = Geist({
@@ -98,10 +99,10 @@ export default function RootLayout({
               <span>
                 Contact:{" "}
                 <a
-                  href="mailto:juha.vaisanen@gmail.com"
+                  href={`mailto:${CONTACT_EMAIL}`}
                   className="underline hover:text-slate-900"
                 >
-                  juha.vaisanen@gmail.com
+                  {CONTACT_EMAIL}
                 </a>
               </span>
               <Link href="/terms" className="underline hover:text-slate-900">

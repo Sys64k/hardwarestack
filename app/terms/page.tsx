@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
@@ -95,10 +96,10 @@ export default function TermsPage() {
           <p>
             Questions about these terms can be sent to{" "}
             <a
-              href="mailto:juha.vaisanen@gmail.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="underline hover:text-slate-900"
             >
-              juha.vaisanen@gmail.com
+              {CONTACT_EMAIL}
             </a>
             .
           </p>
