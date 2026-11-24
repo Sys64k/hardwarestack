@@ -38,7 +38,6 @@ model Cpu {
   tier            ComponentTier
   singleCoreScore Int?
   multiCoreScore  Int?
-  retailLinks     RetailLink[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
@@ -53,43 +52,21 @@ model Gpu {
   architecture       String?
   tier               ComponentTier
   rasterScore        Int?
-  retailLinks        RetailLink[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 }
 
 model Ram {
-  id          String        @id @default(cuid())
-  modelName   String        @unique
-  type        RamType
-  speedMhz    Int
-  capacityGb  Int
-  channels    Int           @default(2)
-  latencyCl   Int?
-  tier        ComponentTier
-  retailLinks RetailLink[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-}
-
-model RetailLink {
-  id           String   @id @default(cuid())
-  asin         String   @unique
-  retailTitle  String
-  currentPrice Float?
-  currency     String   @default("EUR")
-  cpuId        String?
-  cpu          Cpu?     @relation(fields: [cpuId], references: [id], onDelete: Cascade)
-  gpuId        String?
-  gpu          Gpu?     @relation(fields: [gpuId], references: [id], onDelete: Cascade)
-  ramId        String?
-  ram          Ram?     @relation(fields: [ramId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([cpuId])
-  @@index([gpuId])
-  @@index([ramId])
+  id         String        @id @default(cuid())
+  modelName  String        @unique
+  type       RamType
+  speedMhz   Int
+  capacityGb Int
+  channels   Int           @default(2)
+  latencyCl  Int?
+  tier       ComponentTier
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 // Shop link clicks, counted per day. No visitor data: see lib/shop-clicks.ts.

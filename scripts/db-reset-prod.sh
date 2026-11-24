@@ -36,7 +36,7 @@ PROXY_PID=$!
 sleep 3
 
 echo "==> Truncating all tables..."
-psql "$PROD_URL" -c 'TRUNCATE "RetailLink", "Cpu", "Gpu", "Ram" CASCADE;'
+psql "$PROD_URL" -c 'TRUNCATE "Cpu", "Gpu", "Ram" CASCADE;'
 
 echo "==> Running migrations..."
 flyctl ssh console -a hardwarestack -C "node_modules/.bin/prisma migrate deploy" 2>/dev/null \

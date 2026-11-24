@@ -35,7 +35,6 @@ npx prisma db push           # Push schema without migration history (dev only)
 
 ### Data model
 - `Cpu` and `Gpu` are canonical hardware facts with enum-based `ComponentTier` (ENTRY → ENTHUSIAST) and `Vendor` (AMD, INTEL, NVIDIA).
-- `RetailLink` holds ASINs and prices an earlier Amazon scraper collected. Nothing writes to it any more and the app never reads it.
 - The scraper (`scripts/scraper/`) fills `Cpu` and `Gpu` from PassMark, normalised with the Claude API. Never scrape Amazon: its terms don't allow it.
 
 ### Styling
@@ -47,7 +46,7 @@ npx prisma db push           # Push schema without migration history (dev only)
 ### Monetization
 - Affiliate tag: `NEXT_PUBLIC_AMAZON_AFFILIATE_TAG` env var.
 - Amazon links are tagged amazon.de **search** links built by `buildAmazonSearchUrl` in `lib/shopping-links.ts` (no prices: Amazon only allows prices from its official API). With no tag set, links fall back to Google Shopping.
-- Never select `RetailLink.currentPrice`, or anything else from `RetailLink`, in app queries: anything a page fetches ends up in the HTML sent to the browser, even if it isn't shown.
+- Never put prices in the database or pages: anything a page fetches ends up in the HTML sent to the browser, even if it isn't shown.
 - Affiliate links use `rel="sponsored nofollow"`, buttons carry a visible "Affiliate Partner" label, and the footer shows "As an Amazon Associate I earn from qualifying purchases." Keep all three.
 
 ## Environment variables
